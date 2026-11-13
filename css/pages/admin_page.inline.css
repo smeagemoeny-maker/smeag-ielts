@@ -1,0 +1,49 @@
+/* admin_page.php 내부 <style> 블록 (원본 그대로) */
+.course-list { display: flex; flex-wrap: wrap; gap: 24px; margin-top: 24px; }
+.course-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px 0 rgba(80,80,160,0.06);
+    padding: 32px 36px;
+    min-width: 220px;
+    flex: 1 1 220px;
+    text-align: center;
+    cursor: pointer;
+    transition: box-shadow 0.2s, background 0.2s;
+    font-size: 1.1rem;
+    color: #6c63ff;
+    font-weight: 600;
+}
+.course-card:hover, .course-card.selected {
+    background: linear-gradient(90deg, #6c63ff 60%, #a393fa 100%);
+    color: #fff;
+    box-shadow: 0 4px 24px 0 rgba(80,80,160,0.13);
+}
+.course-selected-msg {
+    margin-top: 32px;
+    font-size: 1.2rem;
+    color: #27ae60;
+    font-weight: 600;
+}
+.academic-list { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+.academic-btn {
+    padding: 14px 22px;
+    border-radius: 10px;
+    border: none;
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    cursor: pointer;
+    background: #f3f0ff;
+    color: #6c63ff;
+    transition: background 0.2s, color 0.2s;
+}
+.academic-btn.active, .academic-btn.enabled:hover {
+    background: linear-gradient(90deg, #6c63ff 60%, #a393fa 100%);
+    color: #fff;
+}
+.academic-btn.disabled {
+    background: #e0e0e0;
+    color: #aaa;
+    cursor: not-allowed;
+}

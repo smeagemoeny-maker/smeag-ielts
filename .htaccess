@@ -1,0 +1,16 @@
+# Apache (mod_rewrite) 용 — router.php 와 같은 규칙
+RewriteEngine On
+
+RewriteRule ^(data|db|includes)(/|$) - [F,L]
+RewriteRule (^|/)_engine/ - [F,L]
+
+# 세트별 실제 파일이 있으면 그대로
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteCond %{REQUEST_URI} !\.php$
+RewriteRule ^Courses/ - [L]
+
+# 공통 이미지·음원
+RewriteRule ^Courses/Ielts/(academic|general)/((?:ACADEMIC|GENERAL)\d+)/(listening|reading|writing)/(images|audio)/([\w.-]+)$ Courses/Ielts/_engine/$4/$5 [END]
+
+# 응시 화면
+RewriteRule ^Courses/Ielts/(academic|general)/((?:ACADEMIC|GENERAL)\d+)/(listening|reading|writing)/(listninginfo|readinginfo|writinginfo|listeningcorse|readingcorse|writingcorse|done)\.php$ Courses/Ielts/_engine/$4.php?kind=$1&set=$2&section=$3 [END,QSA]

@@ -1,0 +1,35 @@
+/* indata.php 내부 <style> 블록 (원본) */
+.test-tabs { display: flex; gap: 10px; margin-bottom: 30px; }
+.test-tab { padding: 10px 22px; border-radius: 8px; background: #f3f0ff; color: #6c63ff; font-weight: 600; border: none; cursor: pointer; font-size: 1rem; transition: background 0.2s, color 0.2s; }
+.test-tab.active, .test-tab:hover { background: linear-gradient(90deg, #6c63ff 60%, #a393fa 100%); color: #fff; }
+.sub-tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+.sub-tab { padding: 7px 18px; border-radius: 6px; background: #f3f0ff; color: #6c63ff; font-weight: 600; border: none; cursor: pointer; font-size: 1rem; transition: background 0.2s, color 0.2s; }
+.sub-tab.active, .sub-tab:hover { background: #6c63ff; color: #fff; }
+.search-bar { display: flex; gap: 12px; margin-bottom: 24px; align-items: center; }
+.search-bar input, .search-bar select { padding: 8px 12px; border-radius: 6px; border: 1px solid #ccc; font-size: 1rem; }
+.search-bar button { padding: 8px 20px; border-radius: 6px; background: #6c63ff; color: #fff; border: none; font-weight: 600; cursor: pointer; }
+.search-bar button:hover { background: #4b47b5; }
+.scores-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px 0 rgba(80,80,160,0.06); }
+.scores-table th, .scores-table td { padding: 12px 10px; text-align: center; }
+.scores-table th { background: #f3f0ff; color: #6c63ff; }
+.scores-table tr:not(:last-child) { border-bottom: 1px solid #eee; }
+.pagination { margin: 32px 0 0 0; display: flex; justify-content: center; gap: 6px; }
+.pagination button, .pagination span { padding: 7px 13px; border-radius: 6px; border: none; background: #f3f0ff; color: #6c63ff; font-weight: 600; cursor: pointer; }
+.pagination .active { background: #6c63ff; color: #fff; }
+.pagination button:disabled { background: #e0e0e0; color: #aaa; cursor: not-allowed; }
+.score-btn {
+    background: linear-gradient(90deg, #6c63ff 60%, #4f8cff 100%);
+    color: #fff; font-weight: 700; border: none; border-radius: 8px;
+    font-size: 1rem; box-shadow: 0 2px 8px 0 rgba(80,80,160,0.08); cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s; padding: 10px 15px;
+}
+.score-btn:hover { background: linear-gradient(90deg, #4f8cff 60%, #6c63ff 100%); box-shadow: 0 4px 16px 0 rgba(80,80,160,0.13); }
+#infoModal { display:none; align-items:center; justify-content:center; }
+#infoModal.show { display:flex; }
+
+/* ---- 아래는 인라인 style 속성에서 측정한 computed 값 (원본 재현용) ---- */
+#scoreModal { position: fixed; inset: 0; background: rgba(0,0,0,0.3); display: none; /* open 시 flex, 가운데 정렬 */ }
+#infoModal  { position: fixed; inset: 0; background: rgba(0,0,0,0.35); }
+/* scoreModal 박스: 흰 배경, radius ~18px, 폭 ~455px, 패딩 ~28px, 헤더 "Enter Score and Comment" + × 닫기 */
+/* pdfDownloadPanel: 테이블 아래 인라인 패널, 중앙 정렬 카드(폭 ~420px, bg #f7f6ff 계열, radius ~12px) */
+/* answerCheckPanel: 테이블 아래 인라인 카드, 흰 배경 + 그림자 */

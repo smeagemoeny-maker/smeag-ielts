@@ -1,0 +1,33 @@
+/* etest.php 내부 <style> 블록 (원본) */
+body { background: #f8f9ff; }
+.main-content { padding: 40px 0; }
+.etest-title { font-size: 2.2rem; font-weight: 700; color: #6c63ff; margin-bottom: 12px; text-align: center; }
+.etest-desc { color: #888; font-size: 1.1rem; text-align: center; margin-bottom: 36px; }
+.etest-courses { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; margin-bottom: 36px; }
+.etest-card {
+    background: #fff; border-radius: 18px; box-shadow: 0 2px 12px 0 rgba(80, 80, 160, 0.08);
+    padding: 38px 44px; min-width: 220px; text-align: center; cursor: pointer;
+    font-size: 1.15rem; color: #6c63ff; font-weight: 600;
+    transition: box-shadow 0.2s, background 0.2s, color 0.2s; position: relative;
+}
+.etest-card:hover, .etest-card.selected {
+    background: linear-gradient(90deg, #6c63ff 60%, #a393fa 100%); color: #fff;
+    box-shadow: 0 4px 24px 0 rgba(80, 80, 160, 0.13);
+}
+.etest-card i { font-size: 2.2rem; margin-bottom: 12px; display: block; }
+.etest-academic-list, .etest-general-list { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; margin-top: 18px; }
+.academic-btn, .general-btn {
+    padding: 16px 28px; border-radius: 12px; border: none; font-size: 1.08rem; font-weight: 600;
+    background: #f3f0ff; color: #6c63ff; transition: background 0.2s, color 0.2s; cursor: pointer;
+}
+.academic-btn:hover, .academic-btn:focus, .general-btn:hover, .general-btn:focus {
+    background: linear-gradient(90deg, #6c63ff 60%, #a393fa 100%); color: #fff;
+}
+.etest-academic-wrap, .etest-general-wrap {
+    background: #fff; border-radius: 16px; box-shadow: 0 2px 12px 0 rgba(80, 80, 160, 0.06);
+    padding: 32px 24px 24px 24px; margin: 0 auto; max-width: 1800px;
+}
+@media (max-width: 900px) {
+    .etest-courses { flex-direction: column; align-items: center; }
+    .etest-card { min-width: 180px; padding: 28px 18px; }
+}
