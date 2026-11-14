@@ -8,6 +8,7 @@
   "routes": [
     { "src": "/(data|db|includes|uploads|api)(/.*)?", "dest": "/api/index.php" },
     { "src": "/(.*)\\.php", "dest": "/api/index.php" },
+    { "src": "/(.*/)?", "dest": "/api/index.php" },
     { "src": "/\\.(.*)", "status": 404 },
     { "src": "/(.*)/_engine/(.*)", "status": 404 },
     { "handle": "filesystem" },
