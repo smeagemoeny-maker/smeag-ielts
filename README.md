@@ -34,6 +34,21 @@ Vercel 프로젝트 → Settings → Environment Variables (Production·Preview 
 값이 빠져 있으면 사이트에 "서버 설정이 필요합니다" 안내가 뜸. 로그인 세션도 DB(`sessions` 테이블)에 저장됨.
 Supabase 테이블에는 RLS 를 켜 두어 공개 API 키로는 읽을 수 없음 (PHP 서버만 접근).
 
+## 레거시 데이터 이관 (원본 MySQL `smeag_etest` → Supabase)
+
+1. 원본 19개 테이블을 Supabase 의 `ielts_legacy` 스키마에 그대로 복사 (원본 보존용, RLS 켬·공개 키 접근 없음)
+2. `db/migrate_legacy.php` 로 앱 테이블(users·answer_keys·test_attempts·score_entries·schedules)로 변환
+
+```bash
+SMEAG_DATABASE_URL='postgresql://postgres:<pw>@db.<프로젝트ID>.supabase.co:5432/postgres' php db/migrate_legacy.php            # 앱 테이블이 비어 있을 때
+SMEAG_DATABASE_URL='...' php db/migrate_legacy.php --replace  # 앱 테이블을 비우고 다시 채움 (앱에서 새로 생긴 기록도 지워짐)
+```
+
+- 비밀번호는 원본 bcrypt 그대로 → 기존 비밀번호로 로그인
+- 점수는 앱 채점 함수(`includes/bootstrap.php` 의 `grade()`)로 다시 계산 → 원본이 다른 세트 정답으로 채점한 행은 점수가 달라짐
+- 응시 기록만 있고 회원 정보가 없는 ID 는 로그인 불가 계정(`password_hash = '!legacy-no-account'`)으로 만들어 기록 보존
+- 한 트랜잭션 — 원본 건수와 맞지 않으면 아무것도 바꾸지 않음
+
 ## 테스트 계정 (더미)
 
 | 역할 | ID | PW |
