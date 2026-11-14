@@ -17,7 +17,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             [$me['id'], $testType, $setLabel, $sec, null, $t1, $t2, now()]);
     } else {
         $given = [];
-        for ($i = 1; $i <= 40; $i++) $given[] = $late ? '' : trim((string)($_POST["q$i"] ?? ''));
+        for ($i = 1; $i <= 40; $i++) {
+            $v = $_POST["q$i"] ?? '';
+            if (is_array($v)) $v = implode(',', array_map('strval', $v));   // 여러 개 고르는 문항 (체크박스 q21[])
+            $given[] = $late ? '' : trim((string)$v);
+        }
         $score = grade($given, answer_key($setLabel, $sec));
         q('INSERT INTO test_attempts (user_id, test_type, test_set, section, answers, score, submitted_at) VALUES (?,?,?,?,?,?,?)',
             [$me['id'], $testType, $setLabel, $sec, json_encode($given, JSON_UNESCAPED_UNICODE), $score, now()]);
@@ -29,11 +33,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $_SESSION[$sessKey] ??= time();
 $remaining = max(0, $minutes * 60 - (time() - $_SESSION[$sessKey]));
+$hasContent = is_file($contentFile);
+// 세트별 음원: Courses/Ielts/{kind}/{SET}/listening/audio/listening.mp3 (없으면 _engine 기본)
+$audioFile = dirname($contentFile) . '/audio/listening.mp3';
+$audioUrl = is_file($audioFile) ? 'audio/listening.mp3' : '';
 
 tw_head(ucfirst($section) . ' Test - ' . $setLabel);
 ?>
+<style>
+  .legacy-content { overflow-x: auto; color: #1f2937; line-height: 1.6; }
+  .legacy-content table { border-collapse: collapse; margin-bottom: 20px; max-width: 100%; }
+  .legacy-content th, .legacy-content td { border: 1px solid #000; padding: 8px; text-align: left; }
+  .legacy-content input[type=text] { border: 0; border-bottom: 1px solid #6b21a8; background: #faf5ff; padding: 2px 6px; min-width: 120px; max-width: 100%; }
+  .legacy-content input[type=text]:focus { outline: 2px solid #a855f7; }
+  .legacy-content input[type=radio], .legacy-content input[type=checkbox] { accent-color: #9333ea; margin-right: 6px; }
+  .legacy-content textarea { width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 12px; }
+  .legacy-content img { max-width: 100%; height: auto; }
+  .legacy-content div, .legacy-content table, .legacy-content p { max-width: 100%; box-sizing: border-box; }
+  .legacy-content .page + .page { border-top: 2px dashed #d8b4fe; margin-top: 32px; padding-top: 32px; }
+</style>
 <main class="container mx-auto flex-grow p-6">
-  <form id="exam-form" method="post" class="bg-white rounded-2xl shadow-xl p-8 max-w-5xl mx-auto">
+  <form id="exam-form" method="post" class="bg-white rounded-2xl shadow-xl p-8 <?= $hasContent && $section === 'reading' ? 'max-w-7xl' : 'max-w-5xl' ?> mx-auto">
     <div class="flex justify-between items-center mb-6">
       <div>
         <h1 class="text-2xl font-bold text-purple-700"><?= h($setLabel) ?> · <?= ucfirst($section) ?></h1>
@@ -46,14 +66,16 @@ tw_head(ucfirst($section) . ' Test - ' . $setLabel);
     </div>
 
 <?php if ($section === 'listening'): ?>
-    <div class="mb-6"><audio controls class="w-full"><source src="audio/listening.mp3" type="audio/mpeg"></audio></div>
+<?php if ($audioUrl): ?>
+    <div class="mb-6"><audio controls preload="metadata" class="w-full"><source src="<?= h($audioUrl) ?>" type="audio/mpeg"></audio></div>
+<?php else: ?>
+    <div class="mb-6 p-4 rounded-lg bg-yellow-50 border border-yellow-300 text-yellow-800 text-sm">The audio for this test will be played by the supervisor.</div>
+<?php endif; ?>
 <?php endif; ?>
 
-<?php if (is_file($contentFile)): ?>
-    <div class="prose max-w-none mb-8 border border-purple-200 rounded-lg p-6 bg-purple-50"><?php readfile($contentFile); ?></div>
-<?php endif; ?>
-
-<?php if ($section === 'writing'): ?>
+<?php if ($hasContent): ?>
+    <div class="mb-8"><?php readfile($contentFile); ?></div>
+<?php elseif ($section === 'writing'): ?>
 <?php foreach ([1 => 'at least 150 words', 2 => 'at least 250 words'] as $n => $hint): ?>
     <div class="mb-8">
       <h2 class="text-xl font-semibold text-purple-600 mb-2">Writing Task <?= $n ?> <span class="text-sm text-gray-500 font-normal">(<?= $hint ?>)</span></h2>
