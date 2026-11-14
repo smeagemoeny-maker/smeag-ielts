@@ -2,37 +2,135 @@
 // 공통 초기화: 세션, DB, 인증, 상수, 채점 함수
 declare(strict_types=1);
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 date_default_timezone_set('Asia/Manila');
 
 define('APP_ROOT', dirname(__DIR__));
+define('ON_VERCEL', (bool)getenv('VERCEL'));
+
+/** 설정이 빠졌을 때 안내 화면 (Vercel 에서 DB 환경변수 없음 등) */
+function setup_error(string $msg): never
+{
+    http_response_code(503);
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>SMEAG e-Test 설정 필요</title></head>'
+        . '<body style="font-family:Arial,sans-serif;max-width:640px;margin:60px auto;padding:0 16px;color:#222">'
+        . '<h1 style="color:#e74c3c">SMEAG</h1><h2>서버 설정이 필요합니다</h2><p>' . htmlspecialchars($msg) . '</p>'
+        . '<p style="color:#888">README.md 의 “Vercel 배포” 항목을 참고하세요.</p></body></html>';
+    exit;
+}
 
 // ---------- DB ----------
+/** [dsn, user, pass] — 우선순위: SMEAG_DSN > DATABASE_URL(Postgres URI) > 로컬 SQLite */
+function db_config(): array
+{
+    if ($dsn = getenv('SMEAG_DSN')) {
+        return [$dsn, getenv('SMEAG_DB_USER') ?: null, getenv('SMEAG_DB_PASS') ?: null];
+    }
+    foreach (['SMEAG_DATABASE_URL', 'DATABASE_URL', 'POSTGRES_URL'] as $key) {
+        $url = getenv($key);
+        if (!$url) continue;
+        $p = parse_url($url);
+        if (!$p || !in_array($p['scheme'] ?? '', ['postgres', 'postgresql'], true) || empty($p['host'])) {
+            setup_error("$key 값이 postgresql://user:password@host:port/dbname 형식이 아닙니다.");
+        }
+        parse_str($p['query'] ?? '', $qs);
+        $local = in_array($p['host'], ['localhost', '127.0.0.1'], true);
+        $dsn = sprintf('pgsql:host=%s;port=%d;dbname=%s;sslmode=%s', $p['host'], $p['port'] ?? 5432,
+            ltrim($p['path'] ?? '/postgres', '/') ?: 'postgres', $qs['sslmode'] ?? ($local ? 'prefer' : 'require'));
+        return [$dsn, isset($p['user']) ? urldecode($p['user']) : null, isset($p['pass']) ? urldecode($p['pass']) : null];
+    }
+    if (ON_VERCEL) {
+        setup_error('DATABASE_URL 환경변수가 없습니다. Vercel 프로젝트 Settings → Environment Variables 에 Supabase 접속 주소(Session pooler URI)를 넣고 다시 배포하세요.');
+    }
+    return ['sqlite:' . APP_ROOT . '/data/smeag.sqlite', null, null];
+}
+
 function db(): PDO
 {
     static $pdo = null;
     if ($pdo) return $pdo;
 
-    // MySQL 사용 시: SMEAG_DSN="mysql:host=127.0.0.1;dbname=smeag_etest;charset=utf8mb4" SMEAG_DB_USER=... SMEAG_DB_PASS=...
-    $dsn = getenv('SMEAG_DSN') ?: 'sqlite:' . APP_ROOT . '/data/smeag.sqlite';
-    $isNew = str_starts_with($dsn, 'sqlite:') && !file_exists(substr($dsn, 7));
-
-    $pdo = new PDO($dsn, getenv('SMEAG_DB_USER') ?: null, getenv('SMEAG_DB_PASS') ?: null, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    ]);
-    if (str_starts_with($dsn, 'sqlite:')) {
-        $pdo->exec('PRAGMA foreign_keys = ON');
-        if ($isNew) {
-            $pdo->exec(file_get_contents(APP_ROOT . '/db/schema.sql'));
-            require_once APP_ROOT . '/db/seed.php';
-            seed_database($pdo);
-        }
+    [$dsn, $user, $pass] = db_config();
+    try {
+        $pdo = new PDO($dsn, $user, $pass, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_STRINGIFY_FETCHES => false,
+            // Supabase pooler(pgbouncer) 에서도 동작하도록 서버측 prepared statement 사용 안 함
+            PDO::ATTR_EMULATE_PREPARES => str_starts_with($dsn, 'pgsql:'),
+        ]);
+    } catch (PDOException $e) {
+        error_log('DB connect failed: ' . $e->getMessage());
+        setup_error('데이터베이스에 연결할 수 없습니다. DATABASE_URL(호스트·비밀번호)을 확인하세요.');
     }
+    if (db_driver($pdo) === 'sqlite') {
+        $pdo->exec('PRAGMA foreign_keys = ON');
+    }
+    ensure_schema($pdo);
     return $pdo;
 }
+
+function db_driver(?PDO $pdo = null): string
+{
+    return ($pdo ?? db())->getAttribute(PDO::ATTR_DRIVER_NAME);
+}
+
+/** 테이블이 없으면 만들고, 사용자가 한 명도 없으면 초기 데이터 입력 */
+function ensure_schema(PDO $pdo): void
+{
+    $driver = db_driver($pdo);
+    try {
+        $pdo->query('SELECT 1 FROM sessions LIMIT 1');
+    } catch (PDOException) {
+        // 테이블이 아직 없음 → 생성 (모두 IF NOT EXISTS)
+        $pdo->exec(file_get_contents(APP_ROOT . ($driver === 'pgsql' ? '/db/schema_pgsql.sql' : '/db/schema.sql')));
+    }
+    if ($pdo->query('SELECT 1 FROM users LIMIT 1')->fetchColumn()) {
+        return;
+    }
+
+    require_once APP_ROOT . '/db/seed.php';
+    $pdo->beginTransaction();
+    if ($driver === 'pgsql') {
+        $pdo->query('SELECT pg_advisory_xact_lock(717171)');   // 동시에 여러 서버가 시작해도 한 번만 입력
+    }
+    if ((int)$pdo->query('SELECT COUNT(*) FROM users')->fetchColumn() === 0) {
+        seed_database($pdo);
+    }
+    $pdo->commit();
+}
+
+// ---------- 세션 (DB 저장) ----------
+final class DbSessionHandler implements SessionHandlerInterface
+{
+    public function open(string $path, string $name): bool { return true; }
+    public function close(): bool { return true; }
+
+    public function read(string $id): string|false
+    {
+        $row = q('SELECT data FROM sessions WHERE id = ?', [$id])->fetch();
+        return $row ? (string)$row['data'] : '';
+    }
+
+    public function write(string $id, string $data): bool
+    {
+        q('INSERT INTO sessions (id, data, updated_at) VALUES (?, ?, ?)
+           ON CONFLICT (id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at', [$id, $data, time()]);
+        return true;
+    }
+
+    public function destroy(string $id): bool
+    {
+        q('DELETE FROM sessions WHERE id = ?', [$id]);
+        return true;
+    }
+
+    public function gc(int $max_lifetime): int|false
+    {
+        return q('DELETE FROM sessions WHERE updated_at < ?', [time() - $max_lifetime])->rowCount();
+    }
+}
+
 
 function q(string $sql, array $params = []): PDOStatement
 {
@@ -186,4 +284,15 @@ function json_out($data, int $status = 200): void
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
     exit;
+}
+
+// ---------- 세션 시작 (상수·함수가 모두 정의된 뒤 — 첫 요청 때 DB 초기 데이터 입력이 여기서 일어날 수 있음) ----------
+if (session_status() === PHP_SESSION_NONE) {
+    $https = ($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+    session_set_save_handler(new DbSessionHandler(), true);
+    session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax', 'secure' => $https]);
+    ini_set('session.gc_maxlifetime', '28800');   // 8시간
+    ini_set('session.gc_probability', '1');
+    ini_set('session.gc_divisor', '100');
+    session_start();
 }

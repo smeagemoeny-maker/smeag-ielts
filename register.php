@@ -22,12 +22,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $photo = null;
     if (!$error && !empty($_FILES['photo']['name']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
-        $ext = strtolower(pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION));
-        if (!in_array($ext, ['png', 'jpg', 'jpeg', 'gif'], true) || $_FILES['photo']['size'] > 10 * 1024 * 1024) {
-            $error = 'Photo must be PNG, JPG or GIF up to 10MB.';
+        // 서버리스(Vercel)는 디스크가 유지되지 않으므로 사진을 DB에 data URI 로 저장. Vercel 요청 크기 제한(4.5MB) 때문에 3MB 까지
+        $mime = (new finfo(FILEINFO_MIME_TYPE))->file($_FILES['photo']['tmp_name']);
+        if (!in_array($mime, ['image/png', 'image/jpeg', 'image/gif'], true) || $_FILES['photo']['size'] > 3 * 1024 * 1024) {
+            $error = 'Photo must be PNG, JPG or GIF up to 3MB.';
         } else {
-            $photo = 'uploads/' . bin2hex(random_bytes(8)) . '.' . $ext;
-            move_uploaded_file($_FILES['photo']['tmp_name'], __DIR__ . '/' . $photo);
+            $photo = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($_FILES['photo']['tmp_name']));
         }
     }
 
@@ -135,7 +135,7 @@ $sel = fn($k, $val) => (($_POST[$k] ?? '') === $val) ? ' selected' : '';
           <input type="file" id="photo" name="photo" accept="image/png,image/jpeg,image/gif">
           <div class="file-upload-label">
             <div class="file-upload-icon">📷</div>
-            <div class="file-upload-text">Click to upload photo<br><small>PNG, JPG, GIF up to 10MB</small></div>
+            <div class="file-upload-text">Click to upload photo<br><small>PNG, JPG, GIF up to 3MB</small></div>
           </div>
         </div>
         <div class="photo-preview" id="photoPreview"></div>

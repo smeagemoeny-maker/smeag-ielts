@@ -7,27 +7,46 @@
 
 ```bash
 cd smeag_etest
-php -S 127.0.0.1:8080 router.php
+php -S 127.0.0.1:8080 api/index.php
 # → http://127.0.0.1:8080
 ```
 
 - PHP 8.1 이상 + pdo_sqlite (macOS: `brew install php`)
-- 첫 접속 때 `data/smeag.sqlite` 가 자동 생성되고 더미 데이터가 들어감
-- 데이터 초기화: `rm data/smeag.sqlite` 후 아무 페이지나 열기
-- MySQL 사용: 환경변수 `SMEAG_DSN`, `SMEAG_DB_USER`, `SMEAG_DB_PASS` (스키마는 `db/schema.sql`, AUTOINCREMENT 문법만 바꾸면 됨)
-- Apache 배포: `.htaccess` 에 `router.php` 와 같은 규칙이 들어 있음 (mod_rewrite 필요)
+- `api/index.php` 가 모든 `.php` 요청의 입구 (Vercel 과 로컬이 같은 파일 사용)
+- DB: 환경변수 `DATABASE_URL`(Postgres URI)이 있으면 Postgres, 없으면 `data/smeag.sqlite` (자동 생성)
+- 첫 접속 때 테이블 생성 + 초기 데이터 입력 (사용자가 0명일 때만)
+- 로컬 데이터 초기화: `rm data/smeag.sqlite` 후 아무 페이지나 열기
+- Apache 배포: `.htaccess` 에 같은 규칙이 들어 있음 (mod_rewrite 필요)
+
+## Vercel 배포 (https://smeag-ielts.vercel.app)
+
+`vercel.json` 이 PHP 런타임(`vercel-php@0.9.0`)을 쓰고, `.php`·`db/`·`includes/` 는 소스가 그대로 내려가지 않도록 막음.
+GitHub `main` 에 push 하면 자동 배포됨. Vercel 은 디스크가 유지되지 않으므로 **Postgres(Supabase)가 반드시 필요**:
+
+Vercel 프로젝트 → Settings → Environment Variables (Production·Preview 모두):
+
+| 이름 | 값 |
+|---|---|
+| `DATABASE_URL` | Supabase → Connect → **Session pooler** URI. 예: `postgresql://postgres.<프로젝트ID>:<DB비밀번호>@aws-0-<지역>.pooler.supabase.com:5432/postgres` |
+| `SMEAG_ADMIN_PASSWORD` | 관리자 `A2025001` 의 첫 비밀번호 (처음 데이터 입력 때 한 번만 사용) |
+
+넣은 뒤 Deployments → 최신 배포 → Redeploy. 첫 접속 때 테이블(`db/schema_pgsql.sql`)과 초기 데이터가 자동으로 들어감.
+값이 빠져 있으면 사이트에 "서버 설정이 필요합니다" 안내가 뜸. 로그인 세션도 DB(`sessions` 테이블)에 저장됨.
+Supabase 테이블에는 RLS 를 켜 두어 공개 API 키로는 읽을 수 없음 (PHP 서버만 접근).
 
 ## 테스트 계정 (더미)
 
 | 역할 | ID | PW |
 |---|---|---|
-| 관리자 | A2025001 | smeag1234 |
+| 관리자 | A2025001 | 로컬: smeag1234 / Vercel: `SMEAG_ADMIN_PASSWORD` 값 |
 | 학생 | s2025001 ~ s2025032 | student1234 |
 
 ## 구조 (원본 경로와 같음)
 
 ```
 smeag_etest/
+├─ api/index.php       모든 .php 요청의 입구 (Vercel·로컬 공통 라우터)
+├─ vercel.json
 ├─ index.php / login.php / register.php / logout.php
 ├─ admin/
 │  ├─ admin_page.php   Home
@@ -40,11 +59,12 @@ smeag_etest/
 │  ├─ student_info_api.php · get_dates.php · get_answer_dates.php · get_answer_detail.php   (JSON)
 │  └─ pdf.php          성적표 (브라우저 인쇄 → PDF 저장)
 ├─ Courses/Ielts/{academic|general}/{ACADEMIC|GENERAL}{N}/{listening|reading|writing}/*.php
-│     → 실제 파일은 Courses/Ielts/_engine/ 하나 (router.php / .htaccess 가 연결)
+│     → 실제 파일은 Courses/Ielts/_engine/ 하나 (api/index.php / .htaccess 가 연결)
 │       listninginfo.php(원본 철자) → listeningcorse.php → reading → writing → done.php
 ├─ student/index.php   학생 홈 (세트 선택 · 내 성적 · 일정)
 ├─ includes/           bootstrap.php (DB·인증·채점), layout.php (sidebar·topbar)
-├─ css/ js/ db/ data/ uploads/
+├─ db/                 schema.sql (SQLite) · schema_pgsql.sql (Postgres) · seed.php
+├─ css/ js/ data/
 ```
 
 ## 세트별 실제 시험 자료 넣기

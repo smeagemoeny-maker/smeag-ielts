@@ -1,4 +1,4 @@
--- SMEAG e-Test 스키마 (SQLite 기본. MySQL로 옮길 때는 INTEGER PRIMARY KEY AUTOINCREMENT → INT AUTO_INCREMENT PRIMARY KEY)
+-- SMEAG e-Test 스키마 (SQLite — 로컬 개발용. Postgres/Supabase 는 schema_pgsql.sql)
 -- 원본은 시험×영역마다 테이블이 따로 있었으나, 여기서는 test_type / section 컬럼으로 합침.
 
 CREATE TABLE IF NOT EXISTS users (
@@ -78,4 +78,11 @@ CREATE TABLE IF NOT EXISTS activity_log (
   action     VARCHAR(50),
   details    VARCHAR(255),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 로그인 세션 (DB 저장 — Vercel 같은 서버리스에서도 로그인 유지)
+CREATE TABLE IF NOT EXISTS sessions (
+  id         VARCHAR(128) PRIMARY KEY,
+  data       TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
 );
