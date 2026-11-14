@@ -60,8 +60,12 @@ function db(): PDO
             PDO::ATTR_EMULATE_PREPARES => str_starts_with($dsn, 'pgsql:'),
         ]);
     } catch (PDOException $e) {
-        error_log('DB connect failed: ' . $e->getMessage());
-        setup_error('데이터베이스에 연결할 수 없습니다. DATABASE_URL(호스트·비밀번호)을 확인하세요.');
+        $why = $e->getMessage();
+        if ($pass !== null && $pass !== '') $why = str_replace($pass, '****', $why);
+        error_log('DB connect failed: ' . $why);
+        preg_match('/host=([^;]*)/', $dsn, $hm);
+        setup_error('데이터베이스에 연결할 수 없습니다. DATABASE_URL(호스트·비밀번호)을 확인하세요. '
+            . '[host=' . ($hm[1] ?? '?') . ', user=' . ($user ?? '?') . '] ' . $why);
     }
     if (db_driver($pdo) === 'sqlite') {
         $pdo->exec('PRAGMA foreign_keys = ON');

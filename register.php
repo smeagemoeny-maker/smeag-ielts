@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if (!$error && !in_array($f['course'], COURSES, true)) $error = 'Invalid course.';
     if (!$error && !in_array($f['campus'], CAMPUSES, true)) $error = 'Invalid campus.';
-    if (!$error && q('SELECT 1 FROM users WHERE login_id = ?', [$f['id']])->fetch()) $error = 'This User ID is already taken.';
+    if (!$error && q('SELECT 1 FROM users WHERE lower(login_id) = lower(?)', [$f['id']])->fetch()) $error = 'This User ID is already taken.';
 
     $photo = null;
     if (!$error && !empty($_FILES['photo']['name']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {

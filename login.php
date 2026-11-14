@@ -5,7 +5,7 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id = trim($_POST['id'] ?? '');
     $pw = (string)($_POST['pw'] ?? '');
-    $u = q('SELECT * FROM users WHERE login_id = ?', [$id])->fetch();
+    $u = q('SELECT * FROM users WHERE lower(login_id) = lower(?)', [$id])->fetch();
     if ($u && password_verify($pw, $u['password_hash'])) {
         session_regenerate_id(true);
         $_SESSION['uid'] = (int)$u['id'];
