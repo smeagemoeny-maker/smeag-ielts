@@ -41,6 +41,93 @@ $audioFile = dirname($contentFile) . '/audio/listening.mp3';
 $audioUrl = is_file($audioFile) ? 'audio/listening.mp3' : '';
 $setNo = (int)$m[2];
 
+// Listening: 컴퓨터 시험(CD IELTS) 모양의 별도 화면 (css/listening-exam.css + js/listening-parts.js)
+// 시간 제한 없음 → 음원이 끝나면 30초 답안 확인 시간 뒤 자동 제출 (→ Reading 안내)
+if ($section === 'listening') {
+    ?><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Listening Test - <?= h($setLabel) ?></title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="<?= $base ?>css/listening-exam.css">
+</head>
+<body class="lp-body">
+<form id="exam-form" method="post">
+  <div class="lp-top">
+    <div class="lp-who"><b><?= h($me['ename']) ?></b><span><?= h($setLabel) ?> · Listening</span></div>
+<?php if ($audioUrl): ?>
+    <div class="lp-audio"><audio controls preload="metadata"><source src="<?= h($audioUrl) ?>" type="audio/mpeg"></audio></div>
+<?php else: ?>
+    <div id="local-audio" class="lp-audio"></div>
+    <script src="<?= $base ?>js/local-audio.js"></script>
+    <script>LocalAudio.mount(document.getElementById('local-audio'), <?= $setNo ?>);</script>
+<?php endif; ?>
+    <div class="lp-status">
+      <div id="timer-label">Listening</div>
+      <div id="timer">Audio in progress</div>
+    </div>
+  </div>
+
+  <main class="lp-main">
+    <div id="part-head" class="lp-part-head"></div>
+    <div id="exam-content">
+<?php if ($hasContent): ?>
+      <?php readfile($contentFile); ?>
+<?php else: ?>
+      <div class="legacy-content">
+        <p style="margin-bottom:12px">Write your answers.</p>
+<?php for ($i = 1; $i <= 40; $i++): ?>
+        <div style="margin:6px 0"><b><?= $i ?></b> <input type="text" name="q<?= $i ?>" autocomplete="off"></div>
+<?php endfor; ?>
+      </div>
+<?php endif; ?>
+    </div>
+  </main>
+
+  <div id="lp-arrows" class="lp-arrows">
+    <button type="button" data-step="-1" title="Previous question"><svg viewBox="0 0 24 24" width="30" height="30"><path d="M20 12H6M12 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3.2"/></svg></button>
+    <button type="button" data-step="1" title="Next question"><svg viewBox="0 0 24 24" width="30" height="30"><path d="M4 12h14M12 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="3.2"/></svg></button>
+  </div>
+  <div id="lp-nav" class="lp-nav"></div>
+</form>
+<script src="<?= $base ?>js/listening-parts.js"></script>
+<script>
+const form = document.getElementById("exam-form");
+ListeningParts.init({
+  root: document.getElementById("exam-content"),
+  header: document.getElementById("part-head"),
+  nav: document.getElementById("lp-nav"),
+  arrows: document.getElementById("lp-arrows"),
+  onSubmit: function () { if (confirm("Submit your answers?")) form.submit(); }
+});
+// Enter 로 실수 제출 막기
+form.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target.tagName === "INPUT") e.preventDefault(); });
+const CHECK_SECONDS = 30;
+let finishing = false;
+// audio 의 ended 는 버블링이 없어서 capture 로 받음 (PC 음원 재생기는 나중에 만들어짐)
+document.addEventListener("ended", function (e) {
+  if (finishing || !e.target || e.target.tagName !== "AUDIO") return;
+  finishing = true;
+  let left = CHECK_SECONDS;
+  document.getElementById("timer-label").textContent = "Check your answers";
+  const t = document.getElementById("timer");
+  t.classList.add("lp-urgent");
+  (function count() {
+    t.textContent = "0:" + String(left).padStart(2, "0");
+    if (left <= 0) { form.submit(); return; }
+    left--;
+    setTimeout(count, 1000);
+  })();
+}, true);
+</script>
+</body>
+</html>
+<?php
+    exit;
+}
+
 tw_head(ucfirst($section) . ' Test - ' . $setLabel);
 ?>
 <style>
@@ -63,30 +150,11 @@ tw_head(ucfirst($section) . ' Test - ' . $setLabel);
         <p class="text-gray-600"><?= h($me['ename']) ?></p>
       </div>
       <div class="text-right">
-<?php if ($section === 'listening'): ?>
-        <div id="timer-label" class="text-sm text-gray-500">Listening</div>
-        <div id="timer" class="text-xl font-bold text-purple-600 tabular-nums">Audio in progress</div>
-<?php else: ?>
         <div class="text-sm text-gray-500">Time Remaining</div>
         <div id="timer" class="text-3xl font-bold text-purple-600 tabular-nums">--:--</div>
-<?php endif; ?>
       </div>
     </div>
 
-<?php if ($section === 'listening'): ?>
-<?php if ($audioUrl): ?>
-    <div class="mb-6"><audio controls preload="metadata" class="w-full"><source src="<?= h($audioUrl) ?>" type="audio/mpeg"></audio></div>
-<?php else: ?>
-    <div id="local-audio" class="mb-6"></div>
-    <script src="<?= $base ?>js/local-audio.js"></script>
-    <script>LocalAudio.mount(document.getElementById('local-audio'), <?= $setNo ?>);</script>
-<?php endif; ?>
-<?php endif; ?>
-
-<?php if ($section === 'listening'): ?>
-    <div id="part-nav" class="mb-6 sticky top-0 z-10 bg-white py-3"></div>
-<?php endif; ?>
-    <div id="exam-content">
 <?php if ($hasContent): ?>
     <div class="mb-8"><?php readfile($contentFile); ?></div>
 <?php elseif ($section === 'writing'): ?>
@@ -107,7 +175,6 @@ tw_head(ucfirst($section) . ' Test - ' . $setLabel);
 <?php endfor; ?>
     </div>
 <?php endif; ?>
-    </div>
 
     <div class="mt-8 text-right">
       <button type="submit" class="bg-purple-600 text-white px-8 py-3 rounded-lg hover:bg-purple-700 transition" onclick="return confirm('Submit your answers?')">Submit</button>
@@ -115,31 +182,7 @@ tw_head(ucfirst($section) . ' Test - ' . $setLabel);
   </form>
 </main>
 <?php
-// Listening: 시간 제한 없음 → 음원이 끝나면 30초 답안 확인 시간 뒤 자동 제출 (→ Reading 안내)
-$listeningJs = '<script src="' . $base . 'js/listening-parts.js"></script>
-<script>
-const form = document.getElementById("exam-form");
-ListeningParts.init(document.getElementById("exam-content"), document.getElementById("part-nav"));
-const CHECK_SECONDS = 30;
-let finishing = false;
-function autoSubmit() { form.querySelectorAll("button").forEach(b => b.onclick = null); form.submit(); }
-// audio 의 ended 는 버블링이 없어서 capture 로 받음 (PC 음원 재생기는 나중에 만들어짐)
-document.addEventListener("ended", function (e) {
-  if (finishing || !e.target || e.target.tagName !== "AUDIO") return;
-  finishing = true;
-  let left = CHECK_SECONDS;
-  document.getElementById("timer-label").textContent = "Check your answers";
-  const t = document.getElementById("timer");
-  t.classList.remove("text-xl", "text-purple-600"); t.classList.add("text-3xl", "text-red-600");
-  (function count() {
-    t.textContent = "0:" + String(left).padStart(2, "0");
-    if (left <= 0) { autoSubmit(); return; }
-    left--;
-    setTimeout(count, 1000);
-  })();
-}, true);
-</script>';
-tw_foot($section === 'listening' ? $listeningJs : '<script>
+tw_foot('<script>
 let remain = ' . $remaining . ';
 const form = document.getElementById("exam-form");
 function tick() {

@@ -69,7 +69,8 @@
       el.placeholder = n;
       el.classList.add('lp-box');
       let p = el.previousSibling;
-      while (p && p.nodeType === 3 && !p.textContent.trim()) p = p.previousSibling;
+      // 공백이나 "£", "$" 같은 짧은 기호는 건너뜀 (<b>1</b> £ [빈칸])
+      while (p && p.nodeType === 3 && /^[\s£$€¥#:]*$/.test(p.textContent)) p = p.previousSibling;
       if (p && p.nodeType === 1 && /^(B|STRONG|SPAN)$/.test(p.tagName)
         && clean(p.textContent).replace(/^\(|[).]$/g, '') === String(n)) p.classList.add('lp-num-hidden');
     });
