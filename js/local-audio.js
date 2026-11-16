@@ -1,5 +1,5 @@
 /*
- * 각 PC 에 있는 IELTS 듣기 음원 연결 (예: D:\588 SUNDAE\IELTS MOCK TEST\IELTS MOCKTEST AUDIO)
+ * 각 PC 에 있는 IELTS 듣기 음원 연결 — 모든 PC 가 음악(Music) 폴더에 "SET 1 AUDIO.mp3 ~ SET 30 AUDIO.mp3" 를 둠
  * - Chrome / Edge: 폴더를 한 번 선택하면 그 PC 브라우저에 기억 (IndexedDB). 세트 번호에 맞는 "SET N AUDIO.mp3" 를 찾아 재생
  * - 다른 브라우저: 파일을 직접 고르는 칸을 보여줌
  * 사용: LocalAudio.mount(document.getElementById('local-audio'), 3)
@@ -24,11 +24,19 @@
   const getDir = () => idb('readonly', s => s.get(KEY)).catch(() => null);
   const saveDir = h => idb('readwrite', s => s.put(h, KEY));
 
-  // "SET 3 AUDIO.mp3", "set03 audio.MP3" 등 → 세트 번호로 찾기
-  async function findFile(dir, setNo) {
+  // "SET 3 AUDIO.mp3", "set03 audio.MP3" 등 → 세트 번호로 찾기.
+  // 고른 폴더 바로 안에 없으면 하위 폴더도 찾음 (예: 음악 폴더를 골라도 Music\IELTS MOCKTEST AUDIO\SET 3 AUDIO.mp3 를 찾음)
+  async function findFile(dir, setNo, depth) {
+    depth = depth === undefined ? 2 : depth;
     const re = new RegExp('^set\\s*0*' + setNo + '(?!\\d).*\\.(mp3|m4a|wav|ogg)$', 'i');
+    const subdirs = [];
     for await (const entry of dir.values()) {
       if (entry.kind === 'file' && re.test(entry.name)) return entry.getFile();
+      if (entry.kind === 'directory' && depth > 0) subdirs.push(entry);
+    }
+    for (const sub of subdirs) {
+      const f = await findFile(sub, setNo, depth - 1);
+      if (f) return f;
     }
     return null;
   }
@@ -78,7 +86,8 @@
 
     async function pick() {
       try {
-        const dir = await window.showDirectoryPicker({ id: 'smeag-audio', mode: 'read' });
+        // 모든 PC 가 음원을 음악(Music) 폴더에 둠 → 선택 창을 음악 폴더에서 시작
+        const dir = await window.showDirectoryPicker({ id: 'smeag-audio', mode: 'read', startIn: 'music' });
         await saveDir(dir);
         await load(dir, true);
       } catch (e) { if (e.name !== 'AbortError') render('⚠️ ' + esc(e.message), 'warn'); }
@@ -99,8 +108,8 @@
 
     getDir().then(dir => {
       if (dir) return load(dir, false);
-      render('No audio folder is set on this computer yet. Select the folder that has <b>SET 1 AUDIO.mp3 ~ SET 30 AUDIO.mp3</b> '
-        + '<span class="text-gray-500">(e.g. D:\\588 SUNDAE\\IELTS MOCK TEST\\IELTS MOCKTEST AUDIO)</span>.'
+      render('No audio folder is set on this computer yet. Click the button and select the <b>Music</b> folder '
+        + '(or the folder inside it that has <b>SET 1 AUDIO.mp3 ~ SET 30 AUDIO.mp3</b>).'
         + '<div class="mt-3"><button type="button" data-act="pick" class="' + btn + '">Select audio folder</button></div>');
     }).catch(e => render('⚠️ ' + esc(e.message), 'warn'));
   }
