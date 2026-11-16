@@ -16,11 +16,11 @@ tw_head('Listening Test Instructions');
       <p class="text-gray-600 mb-6">Please read the instructions carefully before starting the listening test.</p>
       <div class="bg-purple-50 p-6 rounded-lg border border-purple-200">
         <h2 class="text-xl font-semibold text-purple-600 mb-4">Test Information</h2>
-        <p class="text-gray-700 mb-2">⏰ <strong>Test Duration:</strong> 30 minutes</p>
+        <p class="text-gray-700 mb-2">⏰ <strong>Test Duration:</strong> the length of the audio (about 30 minutes)</p>
         <h3 class="text-lg font-semibold text-purple-600 mt-4">Important Notes:</h3>
         <ul class="list-disc pl-6 text-gray-700 space-y-2">
-          <li>After <strong class="text-purple-600">30 minutes</strong>, the test will automatically proceed to the next section.</li>
-          <li>Answers not submitted within <strong class="text-purple-600">30 minutes</strong> will be invalidated.</li>
+          <li>The test has <strong class="text-purple-600">4 parts</strong> (Questions 1-10, 11-20, 21-30, 31-40). Use the Part buttons to move between them.</li>
+          <li>When the audio ends, you will have <strong class="text-purple-600">30 seconds</strong> to check your answers. Then your answers are submitted automatically and the test moves on to Reading.</li>
           <li>If the computer shuts down, follow the examiner's instructions.</li>
           <li>Test your audio volume below before starting.</li>
         </ul>

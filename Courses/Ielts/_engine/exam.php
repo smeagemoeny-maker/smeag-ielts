@@ -9,7 +9,8 @@ $sessKey = "exam_start_{$setName}_$section";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $started = $_SESSION[$sessKey] ?? time();
-    $late = time() - $started > ($minutes * 60) + 120;   // 2분 여유. 넘으면 무효 처리 (안내 문구대로)
+    // 2분 여유. 넘으면 무효 처리 (안내 문구대로). Listening 은 시간 제한 없음 (음원 끝 + 30초 뒤 자동 제출)
+    $late = $section !== 'listening' && time() - $started > ($minutes * 60) + 120;
     if ($section === 'writing') {
         $t1 = $late ? '' : trim((string)($_POST['task1'] ?? ''));
         $t2 = $late ? '' : trim((string)($_POST['task2'] ?? ''));
@@ -62,8 +63,13 @@ tw_head(ucfirst($section) . ' Test - ' . $setLabel);
         <p class="text-gray-600"><?= h($me['ename']) ?></p>
       </div>
       <div class="text-right">
+<?php if ($section === 'listening'): ?>
+        <div id="timer-label" class="text-sm text-gray-500">Listening</div>
+        <div id="timer" class="text-xl font-bold text-purple-600 tabular-nums">Audio in progress</div>
+<?php else: ?>
         <div class="text-sm text-gray-500">Time Remaining</div>
         <div id="timer" class="text-3xl font-bold text-purple-600 tabular-nums">--:--</div>
+<?php endif; ?>
       </div>
     </div>
 
@@ -77,6 +83,10 @@ tw_head(ucfirst($section) . ' Test - ' . $setLabel);
 <?php endif; ?>
 <?php endif; ?>
 
+<?php if ($section === 'listening'): ?>
+    <div id="part-nav" class="mb-6 sticky top-0 z-10 bg-white py-3"></div>
+<?php endif; ?>
+    <div id="exam-content">
 <?php if ($hasContent): ?>
     <div class="mb-8"><?php readfile($contentFile); ?></div>
 <?php elseif ($section === 'writing'): ?>
@@ -97,13 +107,39 @@ tw_head(ucfirst($section) . ' Test - ' . $setLabel);
 <?php endfor; ?>
     </div>
 <?php endif; ?>
+    </div>
 
     <div class="mt-8 text-right">
       <button type="submit" class="bg-purple-600 text-white px-8 py-3 rounded-lg hover:bg-purple-700 transition" onclick="return confirm('Submit your answers?')">Submit</button>
     </div>
   </form>
 </main>
-<?php tw_foot('<script>
+<?php
+// Listening: 시간 제한 없음 → 음원이 끝나면 30초 답안 확인 시간 뒤 자동 제출 (→ Reading 안내)
+$listeningJs = '<script src="' . $base . 'js/listening-parts.js"></script>
+<script>
+const form = document.getElementById("exam-form");
+ListeningParts.init(document.getElementById("exam-content"), document.getElementById("part-nav"));
+const CHECK_SECONDS = 30;
+let finishing = false;
+function autoSubmit() { form.querySelectorAll("button").forEach(b => b.onclick = null); form.submit(); }
+// audio 의 ended 는 버블링이 없어서 capture 로 받음 (PC 음원 재생기는 나중에 만들어짐)
+document.addEventListener("ended", function (e) {
+  if (finishing || !e.target || e.target.tagName !== "AUDIO") return;
+  finishing = true;
+  let left = CHECK_SECONDS;
+  document.getElementById("timer-label").textContent = "Check your answers";
+  const t = document.getElementById("timer");
+  t.classList.remove("text-xl", "text-purple-600"); t.classList.add("text-3xl", "text-red-600");
+  (function count() {
+    t.textContent = "0:" + String(left).padStart(2, "0");
+    if (left <= 0) { autoSubmit(); return; }
+    left--;
+    setTimeout(count, 1000);
+  })();
+}, true);
+</script>';
+tw_foot($section === 'listening' ? $listeningJs : '<script>
 let remain = ' . $remaining . ';
 const form = document.getElementById("exam-form");
 function tick() {
