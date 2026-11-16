@@ -130,6 +130,76 @@ ExamAudio.start({
     exit;
 }
 
+// Reading: 컴퓨터 시험(CD IELTS) 모양 — 지문 3개 = Part 1~3, 왼쪽 지문 / 오른쪽 문제, 60분 제한 (끝나면 자동 제출 → Writing 안내)
+if ($section === 'reading' && $hasContent) {
+    ?><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reading Test - <?= h($setLabel) ?></title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="<?= $base ?>css/listening-exam.css">
+<link rel="stylesheet" href="<?= $base ?>css/reading-exam.css">
+</head>
+<body class="lp-body rd-body">
+<form id="exam-form" method="post">
+  <div class="lp-top">
+    <div class="lp-who"><b><?= h($me['ename']) ?></b><span><?= h($setLabel) ?> · Reading</span></div>
+    <div class="lp-status">
+      <div id="timer-label">Time Remaining</div>
+      <div id="timer">--:--</div>
+    </div>
+  </div>
+
+  <main class="lp-main">
+    <div id="part-head" class="lp-part-head"></div>
+    <div id="exam-content">
+      <?php readfile($contentFile); ?>
+    </div>
+  </main>
+
+  <div id="lp-arrows" class="lp-arrows">
+    <button type="button" data-step="-1" title="Previous question"><svg viewBox="0 0 24 24" width="30" height="30"><path d="M20 12H6M12 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3.2"/></svg></button>
+    <button type="button" data-step="1" title="Next question"><svg viewBox="0 0 24 24" width="30" height="30"><path d="M4 12h14M12 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="3.2"/></svg></button>
+  </div>
+  <div id="lp-nav" class="lp-nav"></div>
+</form>
+<script src="<?= $base ?>js/listening-parts.js"></script>
+<script src="<?= $base ?>js/reading-layout.js"></script>
+<script>
+const form = document.getElementById("exam-form");
+const root = document.getElementById("exam-content");
+ListeningParts.init({
+  root: root,
+  header: document.getElementById("part-head"),
+  nav: document.getElementById("lp-nav"),
+  arrows: document.getElementById("lp-arrows"),
+  partOf: ReadingLayout.build(root),
+  intro: "Read the text and answer questions",
+  onPart: function () { ReadingLayout.resetScroll(root); },
+  onSubmit: function () { if (confirm("Submit your answers?")) form.submit(); }
+});
+// Enter 로 실수 제출 막기
+form.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target.tagName === "INPUT") e.preventDefault(); });
+// 60분 (서버 시작 시각 기준 남은 시간). 0 이 되면 자동 제출
+let remain = <?= (int)$remaining ?>;
+const timer = document.getElementById("timer");
+(function tick() {
+  const m = Math.floor(remain / 60), s = remain % 60;
+  timer.textContent = String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+  timer.classList.toggle("rd-low", remain <= 600);
+  if (remain <= 0) { form.submit(); return; }
+  remain--;
+  setTimeout(tick, 1000);
+})();
+</script>
+</body>
+</html>
+<?php
+    exit;
+}
+
 // Writing: 컴퓨터 시험(CD IELTS) 모양 — Task 1 = Part 1, Task 2 = Part 2, 왼쪽 문제 / 오른쪽 답안,
 // 60분 제한 (서버 시작 시각 기준, 끝나면 자동 제출 → 끝 화면). css/writing-exam.css + js/writing-layout.js
 if ($section === 'writing' && $hasContent) {

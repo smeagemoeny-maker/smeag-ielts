@@ -15,7 +15,9 @@
     const m = /^q(\d+)/.exec(el.getAttribute('name') || '');
     return m ? +m[1] : null;
   }
-  function partOfQ(n) { return Math.min(PARTS, Math.max(1, Math.ceil(n / 10))); }
+  // 기본: 10문항씩 4 Part (Listening). Reading 은 init({ partOf }) 로 지문(page)별 Part 를 넘겨줌
+  const defaultPartOf = n => Math.min(PARTS, Math.max(1, Math.ceil(n / 10)));
+  let partOfQ = defaultPartOf;
   const FIELDS = 'input:not([type=hidden]),select,textarea';
 
   function partsIn(node) {
@@ -79,6 +81,8 @@
   function init(o) {
     const root = o.root, nav = o.nav, header = o.header, arrows = o.arrows;
     if (!root) return null;
+    partOfQ = o.partOf || defaultPartOf;
+    const intro = o.intro || 'Listen and answer questions';
     const form = root.closest('form') || document;
 
     // 문항 번호 → 그 문항의 입력칸들
@@ -91,7 +95,7 @@
     const qs = [...byQ.keys()].sort((a, b) => a - b);
     if (!qs.length) return null;
     const qsOf = p => qs.filter(n => partOfQ(n) === p);
-    const parts = [1, 2, 3, 4].filter(p => qsOf(p).length);
+    const parts = [1, 2, 3, 4, 5, 6].filter(p => qsOf(p).length);
 
     if (partsIn(root).size > 1) assign(root);
     hideSectionTitles(root);
@@ -117,6 +121,10 @@
           + '</span></div>';
       }).join('') + '<button type="button" class="lp-submit" data-submit title="Submit your answers">'
         + '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="currentColor" stroke-width="3"/></svg></button>';
+      // 문제지 안의 현재 문항 번호에 테두리 (id="question-N" 이 있는 문제지)
+      root.querySelectorAll('.lp-qnum-cur').forEach(el => el.classList.remove('lp-qnum-cur'));
+      const qEl = document.getElementById('question-' + curQ);
+      if (qEl && root.contains(qEl)) qEl.classList.add('lp-qnum-cur');
       const i = qs.indexOf(curQ);
       arrows.querySelector('[data-step="-1"]').disabled = i <= 0;
       arrows.querySelector('[data-step="1"]').disabled = i >= qs.length - 1;
@@ -125,8 +133,9 @@
     function showPart(p) {
       curPart = p;
       const list = qsOf(p);
-      header.innerHTML = '<b>Part ' + p + '</b><div>Listen and answer questions ' + list[0] + '–' + list[list.length - 1] + '.</div>';
+      header.innerHTML = '<b>Part ' + p + '</b><div>' + intro + ' ' + list[0] + '–' + list[list.length - 1] + '.</div>';
       tagged.forEach(el => el.classList.toggle('lp-hide', +el.dataset.part !== p));
+      o.onPart && o.onPart(p);
     }
 
     function goQ(n, focus) {

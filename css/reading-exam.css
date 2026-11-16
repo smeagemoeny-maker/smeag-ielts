@@ -1,0 +1,38 @@
+/* IELTS Reading 응시 화면 — listening-exam.css 위에 덧씀 (왼쪽 지문 / 오른쪽 문제, 화면 높이에 맞춤) */
+body.rd-body { height: 100vh; overflow: hidden; padding-bottom: 0; }
+body.rd-body #exam-form { height: 100vh; display: flex; flex-direction: column; }
+body.rd-body .lp-top { position: static; flex: none; }
+body.rd-body .lp-main { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px 12px 62px; }
+body.rd-body .lp-part-head { flex: none; }
+body.rd-body #exam-content { flex: 1; min-height: 0; }
+body.rd-body #exam-content > .legacy-content,
+body.rd-body #pageContainer,
+body.rd-body .page { height: 100%; overflow: hidden; }
+
+.rd-split { display: flex; height: 100%; }
+.rd-pane { overflow-y: auto; min-width: 0; padding: 8px 18px 40px 0; }
+.rd-passage { flex: 0 0 50%; }
+.rd-questions { flex: 1 1 auto; padding-left: 18px; }
+.rd-passage h3 { font-size: 17px !important; font-weight: 700 !important; color: #000 !important; margin: 22px 0 14px !important; }
+.rd-passage p { margin: 0 0 14px; color: #222 !important; }
+
+.rd-divider { flex: none; width: 18px; position: relative; cursor: col-resize; background: linear-gradient(to right, transparent 0, transparent 6px, #9a9a9a 6px, #9a9a9a 12px, transparent 12px); }
+.rd-divider span { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 34px; height: 30px; display: flex; align-items: center; justify-content: center;
+  background: #fff; border: 1px solid #8a8a8a; border-radius: 2px; font-size: 18px; color: #333; }
+body.rd-dragging, body.rd-dragging * { cursor: col-resize !important; user-select: none !important; }
+
+/* 문제지 안 현재 문항 번호 테두리 */
+.lp-qnum-cur { display: inline-block; border: 2px solid #1a5bb8; border-radius: 2px; padding: 0 5px; }
+
+/* 남은 시간 10분 이하 */
+.lp-status #timer.rd-low { color: #c00; }
+
+/* 형광펜 (지문·문제 글자 선택 → Highlight / 칠한 곳 클릭 → Clear) */
+mark.rd-hl { background: #ffeb3b; color: inherit; padding: 0; cursor: pointer; }
+.rd-hl-pop { position: fixed; z-index: 1000; display: none; gap: 2px; padding: 4px; background: #fff; border: 1px solid #b5b5b5;
+  border-radius: 3px; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+.rd-hl-pop button { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 64px; padding: 4px 8px;
+  font-size: 12px; color: #444; background: none; border: 0; border-radius: 2px; cursor: pointer; }
+.rd-hl-pop button:hover { background: #eef3fb; }
+.rd-hl-ico { width: 18px; height: 12px; background: #ffeb3b; border: 1px solid #c9b400; border-radius: 2px; }
+.rd-hl-ico-x { background: linear-gradient(to top right, #fff 45%, #c00 45%, #c00 55%, #fff 55%); border-color: #999; }
