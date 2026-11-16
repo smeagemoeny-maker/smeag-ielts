@@ -1,0 +1,84 @@
+/* IELTS 응시 화면 위 막대 도구 (js/exam-tools.js): 연결 상태 · Options (제출 / Contrast / Text size) · Notes */
+
+/* 위 막대 아이콘 */
+.et-icons { position: relative; display: flex; align-items: center; gap: 6px; margin-left: 18px; }
+.et-ico { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 4px; background: none; color: #222; cursor: pointer; }
+.et-ico:hover { background: #f0f0f0; }
+.et-wifi .et-slash { display: none; }
+.et-wifi.et-off { color: #c8102e; }
+.et-wifi.et-off .et-slash { display: inline; }
+.et-pop { position: absolute; top: 48px; left: -40px; z-index: 60; min-width: 190px; padding: 10px 14px; background: #fff; border: 1px solid #bbb; border-radius: 4px; box-shadow: 0 4px 14px rgba(0,0,0,.15); font-size: 14px; line-height: 1.5; }
+.et-ok { color: #157a2e; font-weight: 700; }
+.et-bad { color: #c8102e; font-weight: 700; }
+
+/* 연결 끊김 안내 줄 */
+.et-offline { position: absolute; top: 100%; left: 0; right: 0; z-index: 40; padding: 8px 14px; box-shadow: 0 2px 6px rgba(0,0,0,.2); background: #c8102e; color: #fff; font-weight: 700; font-size: 14px; text-align: center; }
+
+/* Options 화면 (전체 덮개) */
+.et-panel { position: fixed; inset: 0; z-index: 100; background: #fff; overflow-y: auto; }
+.et-panel-in { width: 700px; max-width: calc(100% - 32px); margin: 0 0 0 86px; padding-bottom: 40px; }
+.et-panel-head { position: relative; display: flex; align-items: center; justify-content: center; height: 72px; }
+.et-panel-head h2 { margin: 0; font-size: 26px; font-weight: 400; color: #000; }
+.et-back { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; background: none; cursor: pointer; color: #000; display: flex; align-items: center; justify-content: center; }
+.et-close { position: fixed; top: 12px; right: 26px; width: 44px; height: 44px; border: 0; background: none; cursor: pointer; color: #000; display: flex; align-items: center; justify-content: center; }
+.et-group { border: 1px solid #c8c8c8; border-radius: 4px; overflow: hidden; margin-bottom: 16px; }
+.et-row { display: flex; align-items: center; width: 100%; height: 76px; padding: 0 30px 0 38px; border: 0; background: #fff; color: #000; font: 17px Arial, Helvetica, sans-serif; text-align: left; cursor: pointer; }
+.et-row + .et-row { border-top: 1px solid #c8c8c8; }
+.et-row:hover { background: #f6f6f6; }
+.et-row-ico { width: 46px; color: #b4b4b4; display: flex; }
+.et-row-label { flex: 1; }
+.et-row-go { display: flex; color: #000; }
+.et-row.et-primary { background: #e31837; color: #fff; }
+.et-row.et-primary:hover { background: #c8102e; }
+.et-row.et-primary .et-row-ico, .et-row.et-primary .et-row-go { color: #fff; }
+.et-row:focus-visible, .et-btn:focus-visible, .et-ico:focus-visible { outline: 3px solid #4a90e2; outline-offset: -3px; }
+.et-choice.et-on { font-weight: 700; }
+.et-sample { padding: 6px 12px; border-radius: 3px; flex: 0 0 auto; margin-right: auto; }
+.et-sample-bw { background: #fff; color: #000; border: 1px solid #999; }
+.et-sample-ct-wb { background: #000; color: #fff; }
+.et-sample-ct-yb { background: #000; color: #ff0; }
+
+/* 제출 확인 */
+.et-submit-box { padding: 26px 38px; font-size: 16px; line-height: 1.6; color: #000; }
+.et-submit-box p { margin: 0 0 10px; }
+.et-big { font-size: 19px; }
+.et-warn { color: #c8102e; font-weight: 700; }
+.et-submit-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 22px; }
+.et-btn { display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 22px; border: 1px solid #999; border-radius: 4px; background: #fff; color: #000; font: 16px Arial, Helvetica, sans-serif; cursor: pointer; }
+.et-btn-red { background: #e31837; border-color: #e31837; color: #fff; }
+.et-btn-red:hover { background: #c8102e; }
+
+/* Notes (오른쪽 메모장) */
+.et-notes { position: fixed; top: 64px; right: 12px; bottom: 64px; z-index: 50; width: 340px; display: flex; flex-direction: column; background: #fffbe6; border: 1px solid #c9b458; border-radius: 4px; box-shadow: 0 6px 20px rgba(0,0,0,.18); }
+.et-notes[hidden] { display: none; }
+.et-notes-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 4px 14px; font-size: 16px; }
+.et-notes-head button { border: 0; background: none; cursor: pointer; color: #333; display: flex; padding: 4px; }
+.et-notes p { margin: 0 14px 8px; font-size: 12px; color: #6b5e1e; }
+.et-notes textarea { flex: 1; margin: 0 10px 10px; padding: 8px 10px; resize: none; border: 1px solid #d8c97a; border-radius: 3px; background: #fff; font: 15px/1.5 Arial, Helvetica, sans-serif; color: #000; outline: none; }
+
+/* ── Text size ── 지문·문제·답안 부분만 키움 (위·아래 막대는 그대로) */
+body.ts-1 .lp-part-head { zoom: 1.15; }
+body.ts-2 .lp-part-head { zoom: 1.3; }
+body.ts-1:not(.rd-body):not(.wr-body) #exam-content { zoom: 1.15; }
+body.ts-2:not(.rd-body):not(.wr-body) #exam-content { zoom: 1.3; }
+body.ts-1 .rd-pane > *, body.ts-1 .wr-prompt > * { zoom: 1.15; }
+body.ts-2 .rd-pane > *, body.ts-2 .wr-prompt > * { zoom: 1.3; }
+body.ts-1 .wr-text, body.ts-1 .wr-words { font-size: 17px; }
+body.ts-2 .wr-text, body.ts-2 .wr-words { font-size: 20px; }
+body.ts-1 .et-notes textarea { font-size: 17px; }
+body.ts-2 .et-notes textarea { font-size: 20px; }
+
+/* ── Contrast ── 흰 글자 / 노란 글자 on 검정 (그림은 그대로) */
+body.ct-wb, body.ct-wb *:not(img):not(svg):not(path):not(circle) { background-color: #000 !important; color: #fff !important; border-color: #fff !important; }
+body.ct-yb, body.ct-yb *:not(img):not(svg):not(path):not(circle) { background-color: #000 !important; color: #ff0 !important; border-color: #ff0 !important; }
+body.ct-wb ::placeholder { color: #fff !important; }
+body.ct-yb ::placeholder { color: #ff0 !important; }
+/* 현재 문항·선택된 것은 눈에 띄게 반전 */
+body.ct-wb .lp-q.lp-cur, body.ct-wb .lp-arrows button:not(:disabled), body.ct-wb .et-row.et-primary, body.ct-wb .et-btn-red, body.ct-wb .et-choice.et-on { background-color: #fff !important; color: #000 !important; }
+body.ct-yb .lp-q.lp-cur, body.ct-yb .lp-arrows button:not(:disabled), body.ct-yb .et-row.et-primary, body.ct-yb .et-btn-red, body.ct-yb .et-choice.et-on { background-color: #ff0 !important; color: #000 !important; }
+body.ct-wb .lp-arrows button:disabled, body.ct-yb .lp-arrows button:disabled { opacity: .35; }
+body.ct-wb .et-offline, body.ct-yb .et-offline, body.ct-wb .et-wifi.et-off, body.ct-yb .et-wifi.et-off { background-color: #c8102e !important; color: #fff !important; }
+/* 설정 화면의 견본은 실제 색 그대로 */
+body.ct-wb .et-sample-bw, body.ct-yb .et-sample-bw { background-color: #fff !important; color: #000 !important; }
+body.ct-wb .et-sample-ct-yb, body.ct-yb .et-sample-ct-yb { color: #ff0 !important; }
+body.ct-wb .et-sample-ct-wb, body.ct-yb .et-sample-ct-wb { color: #fff !important; }

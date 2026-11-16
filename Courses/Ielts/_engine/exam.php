@@ -52,6 +52,7 @@ if ($section === 'listening') {
 <title>Listening Test - <?= h($setLabel) ?></title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="<?= $base ?>css/listening-exam.css">
+<link rel="stylesheet" href="<?= $base ?>css/exam-tools.css">
 </head>
 <body class="lp-body">
 <form id="exam-form" method="post">
@@ -89,16 +90,19 @@ if ($section === 'listening') {
 <script src="<?= $base ?>js/listening-parts.js"></script>
 <script src="<?= $base ?>js/local-audio.js"></script>
 <script src="<?= $base ?>js/exam-audio.js"></script>
+<script src="<?= $base ?>js/exam-tools.js"></script>
 <script>
 const form = document.getElementById("exam-form");
 const AUDIO_KEY = <?= json_encode('lp-audio-start-' . $setName) ?>;
-function submitNow() { ExamAudio.clear(AUDIO_KEY); form.submit(); }
+function submitNow() { form.submit(); }
+// 위 막대 도구: 연결 상태 · Options (제출 / Contrast / Text size) · Notes. 연결이 끊기면 제출을 미뤘다가 다시 연결되면 보냄
+const tools = ExamTools.mount({ form: form, top: document.querySelector(".lp-top"), key: <?= json_encode($me['id'] . ':' . $setName . ':' . $section . ':' . $_SESSION[$sessKey]) ?>, beforeSend: function () { ExamAudio.clear(AUDIO_KEY); } });
 ListeningParts.init({
   root: document.getElementById("exam-content"),
   header: document.getElementById("part-head"),
   nav: document.getElementById("lp-nav"),
   arrows: document.getElementById("lp-arrows"),
-  onSubmit: function () { if (confirm("Submit your answers?")) submitNow(); }
+  onSubmit: function () { tools.openSubmission(); }
 });
 // Enter 로 실수 제출 막기
 form.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target.tagName === "INPUT") e.preventDefault(); });
@@ -140,6 +144,7 @@ if ($section === 'reading' && $hasContent) {
 <title>Reading Test - <?= h($setLabel) ?></title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="<?= $base ?>css/listening-exam.css">
+<link rel="stylesheet" href="<?= $base ?>css/exam-tools.css">
 <link rel="stylesheet" href="<?= $base ?>css/reading-exam.css">
 </head>
 <body class="lp-body rd-body">
@@ -167,9 +172,12 @@ if ($section === 'reading' && $hasContent) {
 </form>
 <script src="<?= $base ?>js/listening-parts.js"></script>
 <script src="<?= $base ?>js/reading-layout.js"></script>
+<script src="<?= $base ?>js/exam-tools.js"></script>
 <script>
 const form = document.getElementById("exam-form");
 const root = document.getElementById("exam-content");
+// 위 막대 도구: 연결 상태 · Options (제출 / Contrast / Text size) · Notes
+const tools = ExamTools.mount({ form: form, top: document.querySelector(".lp-top"), key: <?= json_encode($me['id'] . ':' . $setName . ':' . $section . ':' . $_SESSION[$sessKey]) ?> });
 ListeningParts.init({
   root: root,
   header: document.getElementById("part-head"),
@@ -178,7 +186,7 @@ ListeningParts.init({
   partOf: ReadingLayout.build(root),
   intro: "Read the text and answer questions",
   onPart: function () { ReadingLayout.resetScroll(root); },
-  onSubmit: function () { if (confirm("Submit your answers?")) form.submit(); }
+  onSubmit: function () { tools.openSubmission(); }
 });
 // Enter 로 실수 제출 막기
 form.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target.tagName === "INPUT") e.preventDefault(); });
@@ -211,6 +219,7 @@ if ($section === 'writing' && $hasContent) {
 <title>Writing Test - <?= h($setLabel) ?></title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="<?= $base ?>css/listening-exam.css">
+<link rel="stylesheet" href="<?= $base ?>css/exam-tools.css">
 <link rel="stylesheet" href="<?= $base ?>css/writing-exam.css">
 </head>
 <body class="lp-body wr-body">
@@ -237,17 +246,20 @@ if ($section === 'writing' && $hasContent) {
   <div id="lp-nav" class="lp-nav"></div>
 </form>
 <script src="<?= $base ?>js/writing-layout.js"></script>
+<script src="<?= $base ?>js/exam-tools.js"></script>
 <script>
 const form = document.getElementById("exam-form");
+// 위 막대 도구: 연결 상태 · Options (제출 / Contrast / Text size) · Notes
+const tools = ExamTools.mount({ form: form, top: document.querySelector(".lp-top"), key: <?= json_encode($me['id'] . ':' . $setName . ':' . $section . ':' . $_SESSION[$sessKey]) ?>, beforeSend: function () { if (writing) writing.clearDraft(); } });
 const writing = WritingLayout.init({
   root: document.getElementById("exam-content"),
   header: document.getElementById("part-head"),
   nav: document.getElementById("lp-nav"),
   arrows: document.getElementById("lp-arrows"),
   draftKey: <?= json_encode($me['id'] . ':' . $setName . ':' . $_SESSION[$sessKey]) ?>,
-  onSubmit: function () { if (confirm("Submit your answers?")) finish(); }
+  onSubmit: function () { tools.openSubmission(); }
 });
-function finish() { form.submit(); if (writing) writing.clearDraft(); }
+function finish() { form.submit(); }   // 임시 저장은 실제로 보낼 때 지움 (ExamTools beforeSend)
 // 60분 (서버 시작 시각 기준 남은 시간). 0 이 되면 자동 제출
 let remain = <?= (int)$remaining ?>;
 const timer = document.getElementById("timer");
