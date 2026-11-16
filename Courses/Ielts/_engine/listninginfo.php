@@ -16,6 +16,7 @@ tw_head('Listening Test Instructions');
           <li>The test has <strong class="text-purple-600">4 parts</strong> (Questions 1-10, 11-20, 21-30, 31-40). Use the Part buttons to move between them.</li>
           <li>When the audio ends, you will have <strong class="text-purple-600">30 seconds</strong> to check your answers. Then your answers are submitted automatically and the test moves on to Reading.</li>
           <li>If the computer shuts down, follow the examiner's instructions.</li>
+        <li>The test opens in <strong class="text-purple-600">full screen</strong>. Do not leave full screen or switch to other programs (e.g. Alt+Tab). If you do, the test is hidden until you return, and the timer keeps running.</li>
           <li>Test your audio volume below before starting.</li>
         </ul>
         <div class="mt-4">

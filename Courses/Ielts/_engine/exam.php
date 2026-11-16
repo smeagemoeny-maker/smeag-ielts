@@ -91,6 +91,7 @@ if ($section === 'listening') {
 <script src="<?= $base ?>js/local-audio.js"></script>
 <script src="<?= $base ?>js/exam-audio.js"></script>
 <script src="<?= $base ?>js/exam-tools.js"></script>
+<script src="<?= $base ?>js/exam-lock.js"></script>
 <script>
 const form = document.getElementById("exam-form");
 const AUDIO_KEY = <?= json_encode('lp-audio-start-' . $setName) ?>;
@@ -107,8 +108,10 @@ ListeningParts.init({
 // Enter 로 실수 제출 막기
 form.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target.tagName === "INPUT") e.preventDefault(); });
 
+// 전체 화면 [Start Test] 를 누른 뒤 음원 시작
 // 음원: 재생기 없이 자동 재생 (멈춤·이동 불가). 끝나면 30초 답안 확인 시간 뒤 자동 제출 → Reading 안내
 const CHECK_SECONDS = 30;
+ExamLock.init({ key: <?= json_encode('listening-' . $setName) ?>, title: "Listening Test", onStart: function () {
 ExamAudio.start({
   box: document.getElementById("exam-audio"),
   setNo: <?= $setNo ?>,
@@ -127,6 +130,7 @@ ExamAudio.start({
     })();
   }
 });
+} });
 </script>
 </body>
 </html>
@@ -173,9 +177,12 @@ if ($section === 'reading' && $hasContent) {
 <script src="<?= $base ?>js/listening-parts.js"></script>
 <script src="<?= $base ?>js/reading-layout.js"></script>
 <script src="<?= $base ?>js/exam-tools.js"></script>
+<script src="<?= $base ?>js/exam-lock.js"></script>
 <script>
 const form = document.getElementById("exam-form");
 const root = document.getElementById("exam-content");
+// 전체 화면 + 다른 프로그램으로 넘어가기 막기/경고
+ExamLock.init({ key: <?= json_encode('reading-' . $setName) ?>, title: "Reading Test" });
 // 위 막대 도구: 연결 상태 · Options (제출 / Contrast / Text size) · Notes
 const tools = ExamTools.mount({ form: form, top: document.querySelector(".lp-top"), key: <?= json_encode($me['id'] . ':' . $setName . ':' . $section . ':' . $_SESSION[$sessKey]) ?> });
 ListeningParts.init({
@@ -247,8 +254,11 @@ if ($section === 'writing' && $hasContent) {
 </form>
 <script src="<?= $base ?>js/writing-layout.js"></script>
 <script src="<?= $base ?>js/exam-tools.js"></script>
+<script src="<?= $base ?>js/exam-lock.js"></script>
 <script>
 const form = document.getElementById("exam-form");
+// 전체 화면 + 다른 프로그램으로 넘어가기 막기/경고
+ExamLock.init({ key: <?= json_encode('writing-' . $setName) ?>, title: "Writing Test" });
 // 위 막대 도구: 연결 상태 · Options (제출 / Contrast / Text size) · Notes
 const tools = ExamTools.mount({ form: form, top: document.querySelector(".lp-top"), key: <?= json_encode($me['id'] . ':' . $setName . ':' . $section . ':' . $_SESSION[$sessKey]) ?>, beforeSend: function () { if (writing) writing.clearDraft(); } });
 const writing = WritingLayout.init({
