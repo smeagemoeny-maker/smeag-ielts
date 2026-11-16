@@ -57,13 +57,7 @@ if ($section === 'listening') {
 <form id="exam-form" method="post">
   <div class="lp-top">
     <div class="lp-who"><b><?= h($me['ename']) ?></b><span><?= h($setLabel) ?> · Listening</span></div>
-<?php if ($audioUrl): ?>
-    <div class="lp-audio"><audio controls preload="metadata"><source src="<?= h($audioUrl) ?>" type="audio/mpeg"></audio></div>
-<?php else: ?>
-    <div id="local-audio" class="lp-audio"></div>
-    <script src="<?= $base ?>js/local-audio.js"></script>
-    <script>LocalAudio.mount(document.getElementById('local-audio'), <?= $setNo ?>);</script>
-<?php endif; ?>
+    <div id="exam-audio" class="lp-audio"></div>
     <div class="lp-status">
       <div id="timer-label">Listening</div>
       <div id="timer">Audio in progress</div>
@@ -93,34 +87,42 @@ if ($section === 'listening') {
   <div id="lp-nav" class="lp-nav"></div>
 </form>
 <script src="<?= $base ?>js/listening-parts.js"></script>
+<script src="<?= $base ?>js/local-audio.js"></script>
+<script src="<?= $base ?>js/exam-audio.js"></script>
 <script>
 const form = document.getElementById("exam-form");
+const AUDIO_KEY = <?= json_encode('lp-audio-start-' . $setName) ?>;
+function submitNow() { ExamAudio.clear(AUDIO_KEY); form.submit(); }
 ListeningParts.init({
   root: document.getElementById("exam-content"),
   header: document.getElementById("part-head"),
   nav: document.getElementById("lp-nav"),
   arrows: document.getElementById("lp-arrows"),
-  onSubmit: function () { if (confirm("Submit your answers?")) form.submit(); }
+  onSubmit: function () { if (confirm("Submit your answers?")) submitNow(); }
 });
 // Enter 로 실수 제출 막기
 form.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target.tagName === "INPUT") e.preventDefault(); });
+
+// 음원: 재생기 없이 자동 재생 (멈춤·이동 불가). 끝나면 30초 답안 확인 시간 뒤 자동 제출 → Reading 안내
 const CHECK_SECONDS = 30;
-let finishing = false;
-// audio 의 ended 는 버블링이 없어서 capture 로 받음 (PC 음원 재생기는 나중에 만들어짐)
-document.addEventListener("ended", function (e) {
-  if (finishing || !e.target || e.target.tagName !== "AUDIO") return;
-  finishing = true;
-  let left = CHECK_SECONDS;
-  document.getElementById("timer-label").textContent = "Check your answers";
-  const t = document.getElementById("timer");
-  t.classList.add("lp-urgent");
-  (function count() {
-    t.textContent = "0:" + String(left).padStart(2, "0");
-    if (left <= 0) { form.submit(); return; }
-    left--;
-    setTimeout(count, 1000);
-  })();
-}, true);
+ExamAudio.start({
+  box: document.getElementById("exam-audio"),
+  setNo: <?= $setNo ?>,
+  serverUrl: <?= json_encode($audioUrl) ?>,
+  key: AUDIO_KEY,
+  onEnded: function () {
+    let left = CHECK_SECONDS;
+    document.getElementById("timer-label").textContent = "Check your answers";
+    const t = document.getElementById("timer");
+    t.classList.add("lp-urgent");
+    (function count() {
+      t.textContent = "0:" + String(left).padStart(2, "0");
+      if (left <= 0) { submitNow(); return; }
+      left--;
+      setTimeout(count, 1000);
+    })();
+  }
+});
 </script>
 </body>
 </html>

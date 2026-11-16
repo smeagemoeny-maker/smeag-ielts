@@ -114,5 +114,12 @@
     }).catch(e => render('⚠️ ' + esc(e.message), 'warn'));
   }
 
-  window.LocalAudio = { mount: mount, supported: supported };
+  // 시험 화면(js/exam-audio.js)용: 재생기 없이 폴더·파일만 다룸
+  async function pickDir() {
+    const dir = await window.showDirectoryPicker({ id: 'smeag-audio', mode: 'read', startIn: 'music' });
+    await saveDir(dir);
+    return dir;
+  }
+
+  window.LocalAudio = { mount: mount, supported: supported, getDir: getDir, findFile: findFile, pickDir: pickDir };
 })();
