@@ -2,9 +2,10 @@
  * 시험 화면 잠금 — 전체 화면 강제 + 다른 프로그램으로 넘어가기(Alt+Tab 등) 막기/감지
  *   - 브라우저는 페이지가 바뀌면 전체 화면을 반드시 풀고, 사람이 누르지 않으면 다시 켤 수 없음
  *     → 시험 화면을 열면 화면 전체를 덮는 [Start Test] 버튼 한 번으로 전체 화면 시작
- *   - Chrome / Edge (HTTPS 또는 localhost): Keyboard Lock API 로 Alt+Tab · Windows 키 · Esc 를 페이지가 가로챔
- *     (Esc 는 길게 누르면 풀림 — 브라우저 규칙. Ctrl+Alt+Del 은 어떤 웹페이지도 막을 수 없음)
- *   - 그래도 전체 화면이 풀리거나 창을 벗어나면 시험지를 가리고 경고 + 횟수 표시, 버튼을 눌러야 돌아옴
+ *   - Chrome / Edge (HTTPS 또는 localhost): Keyboard Lock API 로 Alt+Tab · Windows 키를 페이지가 가로챔
+ *     (Ctrl+Alt+Del 은 어떤 웹페이지도 막을 수 없음)
+ *   - Esc 는 막지 않음: 한 번 누르면 전체 화면이 풀리고 시험은 일반 창에서 그대로 계속 (경고·횟수 없음)
+ *   - 다른 프로그램·창으로 넘어가면 시험지를 가리고 경고 + 횟수 표시, 버튼을 눌러야 돌아옴 (전체 화면도 다시 켬)
  * 사용: ExamLock.init({ key, title, onStart })   — onStart: 처음 전체 화면이 켜진 뒤 한 번 (Listening 음원 시작 등)
  */
 (function () {
@@ -13,7 +14,8 @@
     set(k, v) { try { sessionStorage.setItem(k, String(v)); } catch (e) {} },
   };
 
-  const KEYS = ['Escape', 'Tab', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight', 'F11', 'ContextMenu'];
+  // Escape 는 넣지 않음 → 한 번 눌러 전체 화면을 나갈 수 있음
+  const KEYS = ['Tab', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight', 'F11', 'ContextMenu'];
 
   function isFull() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
 
@@ -53,7 +55,7 @@
 
     function showStart() {
       show('<h2>' + (o.title || 'Test') + '</h2>'
-        + '<p>The test will open in <b>full screen</b>.<br>Do not leave the test screen or switch to other programs until you submit.</p>'
+        + '<p>The test will open in <b>full screen</b> (press <b>Esc</b> to leave full screen).<br>Do not switch to other programs until you submit.</p>'
         + '<button type="button" class="el-btn" data-el="go">Start Test</button>');
     }
 
@@ -61,8 +63,8 @@
       const n = store.get(vKey);
       show('<h2>Return to the test</h2>'
         + '<p class="el-warn">You left the test screen' + (n ? ' (' + n + (n === 1 ? ' time' : ' times') + ')' : '') + '.</p>'
-        + '<p>Switching to other programs or leaving full screen is not allowed during the test.<br>The timer keeps running.</p>'
-        + '<button type="button" class="el-btn" data-el="go">Return to full screen</button>');
+        + '<p>Switching to other programs is not allowed during the test.<br>The timer keeps running.</p>'
+        + '<button type="button" class="el-btn" data-el="go">Return to the test</button>');
     }
 
     function violation() {
@@ -86,10 +88,7 @@
       if (!started) { started = true; o.onStart && o.onStart(); }
     });
 
-    function onFsChange() { if (!isFull()) violation(); }
-    document.addEventListener('fullscreenchange', onFsChange);
-    document.addEventListener('webkitfullscreenchange', onFsChange);
-    // 다른 창으로 이동(Alt+Tab, 작업 표시줄 클릭 등)
+    // 전체 화면에서 나가는 것(Esc)은 허용 — 위반으로 세지 않음. 다른 창으로 이동(Alt+Tab, 작업 표시줄 클릭 등)
     window.addEventListener('blur', () => setTimeout(() => { if (!document.hasFocus()) violation(); }, 150));
     document.addEventListener('visibilitychange', () => { if (document.hidden) violation(); });
 
