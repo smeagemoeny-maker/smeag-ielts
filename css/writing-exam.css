@@ -1,0 +1,46 @@
+/* IELTS Writing 응시 화면 — listening-exam.css (위 막대·아래 바·화살표) 위에 덧씀. js/writing-layout.js 와 같이 씀 */
+body.wr-body { height: 100vh; overflow: hidden; padding-bottom: 0; }
+body.wr-body #exam-form { height: 100vh; display: flex; flex-direction: column; }
+body.wr-body .lp-top { position: static; flex: none; }
+body.wr-body .lp-main { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px 12px 62px; }
+body.wr-body .lp-part-head { flex: none; }
+body.wr-body #exam-content { flex: 1; min-height: 0; }
+body.wr-body #exam-content > .legacy-content,
+body.wr-body #pageContainer,
+body.wr-body .page { height: 100%; overflow: hidden; }
+body.wr-body .legacy-content .page + .page { border: 0; margin: 0; padding: 0; }
+.page.wr-off { display: none !important; }
+
+.wr-split { display: flex; height: 100%; }
+.wr-pane { overflow-y: auto; min-width: 0; padding: 30px 18px 40px 0; }
+.wr-prompt { flex: 0 0 50%; }
+.wr-answer { flex: 1 1 auto; display: flex; flex-direction: column; padding: 46px 30px 84px 18px; }   /* 아래 84px: ← → 버튼 자리 */
+
+/* 문제: 원래 보라색·큰 글씨를 시험지처럼 검정 15px 로 */
+.wr-prompt, .wr-prompt * { color: #000 !important; font-size: 15px !important; line-height: 1.6; }
+.wr-prompt p { margin: 0 0 18px !important; }
+.wr-prompt b, .wr-prompt strong { font-weight: 700; }
+.wr-prompt i { font-style: normal; }
+.wr-prompt br + br { display: none; }
+.wr-prompt img { display: block; margin: 8px 0 18px; }
+.wr-hidden { display: none !important; }
+
+/* 답안 */
+.wr-text { flex: 1; min-height: 190px; width: 100%; resize: none; border: 1px solid #8a8a8a; border-radius: 0; padding: 10px 12px;
+  font: 15px/1.6 Arial, Helvetica, sans-serif; color: #000; background: #fff; outline: none; }
+.wr-text:focus { border-color: #4a90e2; box-shadow: 0 0 0 1px #4a90e2; }
+.wr-words { flex: none; text-align: right; padding-top: 8px; font-size: 15px; }
+
+/* 가운데 막대 (끌어서 폭 조절) */
+.wr-divider { flex: none; width: 18px; position: relative; cursor: col-resize; background: linear-gradient(to right, transparent 0, transparent 8px, #6b6b6b 8px, #6b6b6b 10px, transparent 10px); }
+.wr-divider span { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+  background: #fff; border: 1px solid #6b6b6b; border-radius: 2px; font-size: 18px; color: #333; }
+body.wr-dragging, body.wr-dragging * { cursor: col-resize !important; user-select: none !important; }
+
+/* 아래 바: 지금 Part 위에 회색 줄 (답안을 쓰면 진하게) */
+.wr-part-on { position: relative; flex: 2.6; }
+.wr-part-on::before { content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 3px; background: #c8c8c8; }
+.wr-part-on.wr-done::before { background: #333; }
+
+/* 남은 시간 10분 이하 */
+.lp-status #timer.wr-low { color: #c00; }
