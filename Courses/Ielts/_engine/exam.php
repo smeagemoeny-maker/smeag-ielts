@@ -34,9 +34,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $_SESSION[$sessKey] ??= time();
 $remaining = max(0, $minutes * 60 - (time() - $_SESSION[$sessKey]));
 $hasContent = is_file($contentFile);
-// 세트별 음원: Courses/Ielts/{kind}/{SET}/listening/audio/listening.mp3 (없으면 _engine 기본)
+// 세트별 음원: Courses/Ielts/{kind}/{SET}/listening/audio/listening.mp3 가 서버에 있으면 그것을,
+// 없으면 각 PC 의 음원 폴더 "SET N AUDIO.mp3" (js/local-audio.js — ACADEMIC N · GENERAL N 듣기는 같은 음원)
 $audioFile = dirname($contentFile) . '/audio/listening.mp3';
 $audioUrl = is_file($audioFile) ? 'audio/listening.mp3' : '';
+$setNo = (int)$m[2];
 
 tw_head(ucfirst($section) . ' Test - ' . $setLabel);
 ?>
@@ -69,7 +71,9 @@ tw_head(ucfirst($section) . ' Test - ' . $setLabel);
 <?php if ($audioUrl): ?>
     <div class="mb-6"><audio controls preload="metadata" class="w-full"><source src="<?= h($audioUrl) ?>" type="audio/mpeg"></audio></div>
 <?php else: ?>
-    <div class="mb-6 p-4 rounded-lg bg-yellow-50 border border-yellow-300 text-yellow-800 text-sm">The audio for this test will be played by the supervisor.</div>
+    <div id="local-audio" class="mb-6"></div>
+    <script src="<?= $base ?>js/local-audio.js"></script>
+    <script>LocalAudio.mount(document.getElementById('local-audio'), <?= $setNo ?>);</script>
 <?php endif; ?>
 <?php endif; ?>
 

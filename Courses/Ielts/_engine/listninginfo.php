@@ -27,6 +27,13 @@ tw_head('Listening Test Instructions');
         <div class="mt-4">
           <audio controls class="w-full"><source src="audio/audio_test.wav" type="audio/wav"></audio>
         </div>
+<?php if (!is_file(APP_ROOT . "/Courses/Ielts/$kind/$setName/listening/audio/listening.mp3")): ?>
+        <h3 class="text-lg font-semibold text-purple-600 mt-6 mb-2">Test Audio (<?= h($setLabel) ?>)</h3>
+        <p class="text-gray-600 text-sm mb-2">Check that the audio for this test is connected on this computer.</p>
+        <div id="local-audio"></div>
+        <script src="<?= $base ?>js/local-audio.js"></script>
+        <script>LocalAudio.mount(document.getElementById('local-audio'), <?= (int)$m[2] ?>, { checkOnly: true });</script>
+<?php endif; ?>
       </div>
       <div class="mt-6 text-right">
         <button id="next-to-page2" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition">Next</button>
