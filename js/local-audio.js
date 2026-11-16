@@ -80,7 +80,7 @@
       }
       const file = await findFile(dir, setNo);
       if (file) play(file, dir.name);
-      else render('⚠️ <b>SET ' + setNo + ' AUDIO.mp3</b> was not found in folder <b>' + esc(dir.name) + '</b>.<div class="mt-3">'
+      else render('⚠️ <b>SET ' + setNo + ' AUDIO.mp3</b> was not found in folder <b>' + esc(dir.name) + '</b> (or its subfolders).<div class="mt-3">'
         + '<button type="button" data-act="pick" class="' + btn + '">Select another folder</button></div>', 'warn');
     }
 
