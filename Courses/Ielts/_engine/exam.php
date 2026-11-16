@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     unset($_SESSION[$sessKey]);
     draft_q("DELETE FROM exam_drafts WHERE $draftWhere", $draftKey);
-    header('Location: ' . NEXT_SECTION[$section]);
+    header('Location: ' . ($isSingle ? 'done.php' : NEXT_SECTION[$section]));
     exit;
 }
 

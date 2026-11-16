@@ -2,6 +2,7 @@
 // Reading / Writing 안내 페이지
 require __DIR__ . '/context.php';
 $min = SECTION_MINUTES[$section];
+$isSingle = set_single_mode($singleKey);   // Individual Skill Test 면 이 영역만 보고 끝
 tw_head(ucfirst($section) . ' Test Instructions');
 ?>
 <main class="container mx-auto flex-grow p-6">
@@ -13,10 +14,13 @@ tw_head(ucfirst($section) . ' Test Instructions');
       <p class="text-gray-700 mb-2">⏰ <strong>Test Duration:</strong> <?= $min ?> minutes</p>
       <h3 class="text-lg font-semibold text-purple-600 mt-4">Important Notes:</h3>
       <ul class="list-disc pl-6 text-gray-700 space-y-2">
-        <li>After <strong class="text-purple-600"><?= $min ?> minutes</strong>, the test will automatically proceed to the next section.</li>
+        <li>After <strong class="text-purple-600"><?= $min ?> minutes</strong>, your answers are submitted automatically<?= $isSingle ? ' and your result is shown' : ($section === 'writing' ? ' and the test ends' : ' and the test proceeds to the next section') ?>.</li>
+<?php if ($isSingle): ?>
+        <li>This is an <strong class="text-purple-600">Individual Skill Test</strong>: only the <?= ucfirst($section) ?> section is taken.</li>
+<?php endif; ?>
         <li>Answers not submitted within <strong class="text-purple-600"><?= $min ?> minutes</strong> will be invalidated.</li>
         <li>If the computer shuts down, follow the examiner's instructions.</li>
-        <li>The test opens in <strong class="text-purple-600">full screen</strong>. Do not leave full screen or switch to other programs (e.g. Alt+Tab). If you do, the test is hidden until you return, and the timer keeps running.</li>
+        <li>The test opens in <strong class="text-purple-600">full screen</strong>. You may press <strong class="text-purple-600">Esc</strong> to leave full screen, but do not switch to other programs (e.g. Alt+Tab). If you do, the test is hidden until you return, and the timer keeps running.</li>
       </ul>
     </div>
     <div class="mt-6 text-right">

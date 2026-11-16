@@ -1,6 +1,7 @@
 <?php
 // 학생용 Listening 안내 (연습문제 페이지 없음 → 바로 시험으로)
 require __DIR__ . '/context.php';
+$isSingle = set_single_mode($singleKey);   // Individual Skill Test 면 Listening 만 보고 끝
 tw_head('Listening Test Instructions');
 ?>
 <main class="container mx-auto flex-grow p-6">
@@ -14,9 +15,12 @@ tw_head('Listening Test Instructions');
         <h3 class="text-lg font-semibold text-purple-600 mt-4">Important Notes:</h3>
         <ul class="list-disc pl-6 text-gray-700 space-y-2">
           <li>The test has <strong class="text-purple-600">4 parts</strong> (Questions 1-10, 11-20, 21-30, 31-40). Use the Part buttons to move between them.</li>
-          <li>When the audio ends, you will have <strong class="text-purple-600">30 seconds</strong> to check your answers. Then your answers are submitted automatically and the test moves on to Reading.</li>
+          <li>When the audio ends, you will have <strong class="text-purple-600">30 seconds</strong> to check your answers. Then your answers are submitted automatically<?= $isSingle ? ' and your result is shown' : ' and the test moves on to Reading' ?>.</li>
+<?php if ($isSingle): ?>
+          <li>This is an <strong class="text-purple-600">Individual Skill Test</strong>: only the Listening section is taken.</li>
+<?php endif; ?>
           <li>If the computer shuts down, follow the examiner's instructions.</li>
-        <li>The test opens in <strong class="text-purple-600">full screen</strong>. Do not leave full screen or switch to other programs (e.g. Alt+Tab). If you do, the test is hidden until you return, and the timer keeps running.</li>
+        <li>The test opens in <strong class="text-purple-600">full screen</strong>. You may press <strong class="text-purple-600">Esc</strong> to leave full screen, but do not switch to other programs (e.g. Alt+Tab). If you do, the test is hidden until you return, and the timer keeps running.</li>
           <li>Test your audio volume below before starting.</li>
         </ul>
         <div class="mt-4">

@@ -5,6 +5,7 @@ require_once __DIR__ . '/bootstrap.php';
 const STUDENT_MENU = [
     'home'     => ['index.php', 'fa-solid fa-table-columns', 'Home'],
     'etest'    => ['etest.php', 'fa-solid fa-book', 'English TEST'],
+    'skill'    => ['skill.php', 'fa-solid fa-bullseye', 'Individual Skill Test'],
     'schedule' => ['schedule.php', 'fa-solid fa-chart-bar', 'Schedule'],
     'scores'   => ['scores.php', 'fa-solid fa-graduation-cap', 'Scores'],
 ];

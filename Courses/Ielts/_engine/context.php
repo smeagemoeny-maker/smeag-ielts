@@ -24,6 +24,18 @@ $contentFile = APP_ROOT . "/Courses/Ielts/$kind/$setName/$section/content.html";
 const SECTION_MINUTES = ['listening' => 30, 'reading' => 60, 'writing' => 60];
 const NEXT_SECTION = ['listening' => '../reading/readinginfo.php', 'reading' => '../writing/writinginfo.php', 'writing' => 'done.php'];
 
+// Individual Skill Test (student/skill.php): 한 영역만 응시 → 제출하면 다음 영역으로 가지 않고 끝 화면 (done.php)
+//   안내 페이지를 ?single=1 로 열면 켜지고, 그냥 열면(전체 시험) 꺼짐. 응시 화면·끝 화면은 세션 값을 봄
+$singleKey = "single_skill_{$setName}_$section";
+$isSingle = !empty($_SESSION[$singleKey]);
+function set_single_mode(string $key): bool
+{
+    $on = ($_GET['single'] ?? '') === '1';
+    if ($on) $_SESSION[$key] = true;
+    else unset($_SESSION[$key]);
+    return $on;
+}
+
 function tw_head(string $title): void
 {
     ?><!DOCTYPE html>
