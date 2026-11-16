@@ -75,12 +75,8 @@ function student_courses(array $me): void
         ['BUSINESS TEST', 'fa-solid fa-book-open', ''],
         ['SPEAKING MASTER TEST', 'fa-solid fa-microphone', ''],
     ];
-    // 학생 코스가 IELTS 면 해당 세트 목록을 처음부터 열어 둠
-    $open = match ((string)$me['course']) {
-        'IELTS ACADEMIC' => 'academic',
-        'IELTS GENERAL' => 'general',
-        default => '',
-    };
+    // 관리자 English TEST 화면과 같게: 처음에는 아무 카드도 선택하지 않음
+    $open = '';
     ?>
       <div class="etest-title">English TEST Courses</div>
       <div class="etest-desc">Select a test course to manage or view details. Click on IELTS ACADEMIC TEST or IELTS GENERAL TEST to see available test sets.</div>
