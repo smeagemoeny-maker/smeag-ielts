@@ -82,6 +82,17 @@ CREATE TABLE IF NOT EXISTS sessions (
   updated_at INTEGER NOT NULL
 );
 
+-- 응시 중 답안 자동 저장 (정전·인터넷 끊김 대비). 제출하면 지움. 기존 DB 에는 exam.php 가 처음 쓸 때 만듦
+CREATE TABLE IF NOT EXISTS exam_drafts (
+  user_id    INTEGER NOT NULL,
+  test_set   VARCHAR(30) NOT NULL,
+  section    VARCHAR(20) NOT NULL,
+  answers    TEXT NOT NULL,
+  started_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, test_set, section)
+);
+
 -- Supabase: 이 테이블들은 PHP 서버만 접근. 공개 API(anon 키)로는 읽지 못하게 RLS 켜 둠 (정책 없음 = 전부 거부)
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE answer_keys ENABLE ROW LEVEL SECURITY;
@@ -90,3 +101,4 @@ ALTER TABLE score_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE schedules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE exam_drafts ENABLE ROW LEVEL SECURITY;

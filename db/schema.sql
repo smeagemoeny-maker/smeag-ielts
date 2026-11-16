@@ -86,3 +86,14 @@ CREATE TABLE IF NOT EXISTS sessions (
   data       TEXT NOT NULL,
   updated_at INTEGER NOT NULL
 );
+
+-- 응시 중 답안 자동 저장 (정전·인터넷 끊김 대비). 제출하면 지움. 기존 DB 에는 exam.php 가 처음 쓸 때 만듦
+CREATE TABLE IF NOT EXISTS exam_drafts (
+  user_id    INTEGER NOT NULL,
+  test_set   VARCHAR(30) NOT NULL,
+  section    VARCHAR(20) NOT NULL,
+  answers    TEXT NOT NULL,
+  started_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, test_set, section)
+);

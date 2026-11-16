@@ -2,14 +2,14 @@
  * IELTS Listening 시험 음원 — 재생기를 보여주지 않고 자동 재생. 응시자는 멈추거나 앞뒤로 옮길 수 없음 (음량만 조절)
  *   - 음원: 서버 파일(serverUrl)이 있으면 그것, 없으면 PC 음원 폴더의 "SET N AUDIO.mp3" (js/local-audio.js)
  *   - 브라우저가 소리 자동 재생을 막으면 화면을 덮는 "Start Listening Test" 버튼 한 번으로 시작
- *   - 새로고침해도 처음부터 다시 나오지 않고, 시작한 시각 기준으로 이어서 재생 (sessionStorage)
+ *   - 새로고침해도 처음부터 다시 나오지 않고, 시작한 시각 기준으로 이어서 재생 (localStorage — 브라우저를 껐다 켜도 이어짐)
  * 사용: ExamAudio.start({ box, setNo, serverUrl, key, onEnded })
  */
 (function () {
   const store = {
-    get(k) { try { return +sessionStorage.getItem(k) || 0; } catch (e) { return 0; } },
-    set(k, v) { try { sessionStorage.setItem(k, String(v)); } catch (e) {} },
-    del(k) { try { sessionStorage.removeItem(k); } catch (e) {} },
+    get(k) { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } },
+    set(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} },
+    del(k) { try { localStorage.removeItem(k); } catch (e) {} },
   };
 
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }

@@ -29,7 +29,7 @@ tw_head('Listening Test Instructions');
         <script src="<?= $base ?>js/local-audio.js"></script>
         <script>LocalAudio.mount(document.getElementById('local-audio'), <?= (int)$m[2] ?>, { checkOnly: true });</script>
 <?php endif; ?>
-        <script>try { sessionStorage.removeItem(<?= json_encode('lp-audio-start-' . $setName) ?>); } catch (e) {}</script>
+        <script>try { localStorage.removeItem(<?= json_encode('lp-audio-start-' . $setName) ?>); sessionStorage.removeItem(<?= json_encode('lp-audio-start-' . $setName) ?>); } catch (e) {}</script>
       </div>
       <div class="mt-6 text-right">
         <a href="listeningcorse.php" class="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition">Enter Test</a>

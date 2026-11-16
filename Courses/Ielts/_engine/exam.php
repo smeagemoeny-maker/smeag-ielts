@@ -7,8 +7,42 @@ $sec = strtoupper($section);
 $minutes = SECTION_MINUTES[$section];
 $sessKey = "exam_start_{$setName}_$section";
 
+// ---------- 자동 저장 (정전·인터넷 끊김 대비) ----------
+// exam_drafts: 응시 중인 답안 + 시작 시각. 다른 PC 로 다시 로그인해도 답안과 남은 시간이 이어짐. 제출하면 지움.
+// 기존 DB 에 테이블이 없으면 처음 쓸 때 만듦 (db/schema*.sql 에도 있음)
+const DRAFT_MAX_AGE = 3 * 3600;   // 3시간 지난 임시 답안은 버림 (다음 날 같은 세트를 다시 볼 때 옛 답안이 뜨지 않게)
+function draft_q(string $sql, array $params = []): PDOStatement
+{
+    try {
+        return q($sql, $params);
+    } catch (PDOException $e) {
+        db()->exec('CREATE TABLE IF NOT EXISTS exam_drafts (
+            user_id INTEGER NOT NULL, test_set VARCHAR(30) NOT NULL, section VARCHAR(20) NOT NULL,
+            answers TEXT NOT NULL, started_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+            PRIMARY KEY (user_id, test_set, section))');
+        if (db_driver() === 'pgsql') db()->exec('ALTER TABLE exam_drafts ENABLE ROW LEVEL SECURITY');
+        return q($sql, $params);
+    }
+}
+$draftWhere = 'user_id = ? AND test_set = ? AND section = ?';
+$draftKey = [$me['id'], $setName, $section];
+
+// 자동 저장 요청 (fetch / sendBeacon). 응시 화면을 열 때 만든 행만 고침 → 제출 뒤 늦게 온 저장은 무시됨
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_autosave'])) {
+    header('Content-Type: application/json');
+    $data = [];
+    foreach ($_POST as $k => $v) {
+        if (preg_match('/^(q\d{1,2}|task[12])$/', $k)) $data[$k] = is_array($v) ? array_map('strval', $v) : (string)$v;
+    }
+    $json = json_encode($data, JSON_UNESCAPED_UNICODE);
+    if (strlen($json) > 200000) { http_response_code(413); exit('{"ok":false}'); }
+    $n = draft_q("UPDATE exam_drafts SET answers = ?, updated_at = ? WHERE $draftWhere", array_merge([$json, time()], $draftKey))->rowCount();
+    exit(json_encode(['ok' => $n > 0, 't' => time()]));
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $started = $_SESSION[$sessKey] ?? time();
+    $dStart = draft_q("SELECT started_at FROM exam_drafts WHERE $draftWhere", $draftKey)->fetchColumn();
+    $started = $_SESSION[$sessKey] ?? ($dStart ? (int)$dStart : time());
     // 2분 여유. 넘으면 무효 처리 (안내 문구대로). Listening 은 시간 제한 없음 (음원 끝 + 30초 뒤 자동 제출)
     $late = $section !== 'listening' && time() - $started > ($minutes * 60) + 120;
     if ($section === 'writing') {
@@ -28,12 +62,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             [$me['id'], $testType, $setLabel, $sec, json_encode($given, JSON_UNESCAPED_UNICODE), $score, now()]);
     }
     unset($_SESSION[$sessKey]);
+    draft_q("DELETE FROM exam_drafts WHERE $draftWhere", $draftKey);
     header('Location: ' . NEXT_SECTION[$section]);
     exit;
 }
 
-$_SESSION[$sessKey] ??= time();
+// 시작 시각: 임시 답안이 있으면 그 시각 (다시 로그인·다른 PC 여도 남은 시간 그대로), 없으면 새로 시작
+$draft = draft_q("SELECT answers, started_at, updated_at FROM exam_drafts WHERE $draftWhere", $draftKey)->fetch();
+if ($draft && time() - (int)$draft['started_at'] > DRAFT_MAX_AGE) {
+    draft_q("DELETE FROM exam_drafts WHERE $draftWhere", $draftKey);
+    $draft = false;
+}
+if ($draft) {
+    $_SESSION[$sessKey] = (int)$draft['started_at'];
+} else {
+    if (!isset($_SESSION[$sessKey]) || time() - $_SESSION[$sessKey] > DRAFT_MAX_AGE) $_SESSION[$sessKey] = time();
+    draft_q("INSERT INTO exam_drafts (user_id, test_set, section, answers, started_at, updated_at) VALUES (?, ?, ?, '{}', ?, 0)
+             ON CONFLICT (user_id, test_set, section) DO NOTHING", array_merge($draftKey, [$_SESSION[$sessKey]]));
+}
 $remaining = max(0, $minutes * 60 - (time() - $_SESSION[$sessKey]));
+// 브라우저로 넘길 자동 저장 설정 (서버에 저장된 답안이 있으면 되살릴 때 씀)
+$autosave = [
+    'key' => 'ielts-autosave:' . $me['id'] . ':' . $setName . ':' . $section,
+    'started' => $_SESSION[$sessKey],
+    'server' => $draft && (int)$draft['updated_at'] > 0
+        ? ['answers' => json_decode((string)$draft['answers'], true) ?: [], 't' => (int)$draft['updated_at'] * 1000] : null,
+];
+function autosave_script(string $base, array $autosave): void
+{
+    echo '<script src="' . $base . 'js/exam-autosave.js"></script>' . "\n"
+        . '<script>ExamAutosave.init(document.getElementById("exam-form"), '
+        . json_encode($autosave, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) . ');</script>' . "\n";
+}
 $hasContent = is_file($contentFile);
 // 세트별 음원: Courses/Ielts/{kind}/{SET}/listening/audio/listening.mp3 가 서버에 있으면 그것을,
 // 없으면 각 PC 의 음원 폴더 "SET N AUDIO.mp3" (js/local-audio.js — ACADEMIC N · GENERAL N 듣기는 같은 음원)
@@ -132,6 +192,7 @@ ExamAudio.start({
 });
 } });
 </script>
+<?php autosave_script($base, $autosave); ?>
 </body>
 </html>
 <?php
@@ -209,6 +270,7 @@ const timer = document.getElementById("timer");
   setTimeout(tick, 1000);
 })();
 </script>
+<?php autosave_script($base, $autosave); ?>
 </body>
 </html>
 <?php
@@ -282,6 +344,7 @@ const timer = document.getElementById("timer");
   setTimeout(tick, 1000);
 })();
 </script>
+<?php autosave_script($base, $autosave); ?>
 </body>
 </html>
 <?php
