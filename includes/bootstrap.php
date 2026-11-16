@@ -83,14 +83,14 @@ function db_driver(?PDO $pdo = null): string
 function ensure_schema(PDO $pdo): void
 {
     $driver = db_driver($pdo);
+    // 평소에는 쿼리 1번으로 끝냄 (테이블 있고 사용자 있음)
     try {
-        $pdo->query('SELECT 1 FROM sessions LIMIT 1');
+        if ($pdo->query('SELECT 1 FROM users LIMIT 1')->fetchColumn()) {
+            return;
+        }
     } catch (PDOException) {
         // 테이블이 아직 없음 → 생성 (모두 IF NOT EXISTS)
         $pdo->exec(file_get_contents(APP_ROOT . ($driver === 'pgsql' ? '/db/schema_pgsql.sql' : '/db/schema.sql')));
-    }
-    if ($pdo->query('SELECT 1 FROM users LIMIT 1')->fetchColumn()) {
-        return;
     }
 
     require_once APP_ROOT . '/db/seed.php';
