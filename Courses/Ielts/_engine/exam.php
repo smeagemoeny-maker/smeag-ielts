@@ -237,6 +237,7 @@ if ($section === 'reading' && $hasContent) {
 </form>
 <script src="<?= $base ?>js/listening-parts.js"></script>
 <script src="<?= $base ?>js/reading-layout.js"></script>
+<script src="<?= $base ?>js/reading-headings.js"></script>
 <script src="<?= $base ?>js/exam-tools.js"></script>
 <script src="<?= $base ?>js/exam-lock.js"></script>
 <script>
@@ -246,6 +247,8 @@ const root = document.getElementById("exam-content");
 ExamLock.init({ key: <?= json_encode('reading-' . $setName) ?>, title: "Reading Test" });
 // 위 막대 도구: 연결 상태 · Options (제출 / Contrast / Text size) · Notes
 const tools = ExamTools.mount({ form: form, top: document.querySelector(".lp-top"), key: <?= json_encode($me['id'] . ':' . $setName . ':' . $section . ':' . $_SESSION[$sessKey]) ?> });
+// "List of Headings" 문제 → 제목을 끌어다 놓기 (Part 나누기보다 먼저)
+ReadingHeadings.init(root);
 ListeningParts.init({
   root: root,
   header: document.getElementById("part-head"),
