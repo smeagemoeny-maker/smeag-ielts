@@ -48,6 +48,11 @@ function student_head(string $page, string $title = 'SMEAG'): void
 .resume-row b { color: #333; }
 .resume-btn { background: #ea580c; color: #fff; text-decoration: none; font-weight: 700; padding: 10px 20px; border-radius: 8px; white-space: nowrap; }
 .resume-btn:hover { background: #c2410c; }
+.student-id-bar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin: 0 0 18px; }
+.student-id-bar .sid-card { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px 0 rgba(80, 80, 160, 0.08); padding: 10px 18px; }
+.student-id-bar .sid-icon { width: 38px; height: 38px; border-radius: 50%; background: #6c63ff; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+.student-id-bar .sid-name { font-weight: 700; color: #333; font-size: 1.02rem; line-height: 1.2; }
+.student-id-bar .sid-id { color: #6c63ff; font-size: 0.88rem; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -64,6 +69,12 @@ function student_head(string $page, string $title = 'SMEAG'): void
 
   <main class="main-content">
     <div>
+<?php $sidMe = current_user(); if ($sidMe): ?>
+      <div class="student-id-bar"><div class="sid-card">
+        <div class="sid-icon"><i class="fa-solid fa-user"></i></div>
+        <div><div class="sid-name"><?= h($sidMe['ename']) ?></div><div class="sid-id">ID: <?= h($sidMe['login_id']) ?></div></div>
+      </div></div>
+<?php endif; ?>
 <?php
 }
 
