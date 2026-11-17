@@ -16,6 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'regis
             [$test, $course, json_encode($answers, JSON_UNESCAPED_UNICODE), now()]);
         log_activity($me['login_id'], 'Updated', "Registered answers for $test $course");
         $message = ['success', "Answers for $test ($course) have been registered."];
+        // ACADEMIC N 듣기 정답 = GENERAL N 듣기 정답 → GENERAL N 듣기 응시 점수도 새 정답으로 다시 채점
+        if ($course === 'Listening' && preg_match('/^ACADEMIC(\d+)$/', $test, $m)) regrade_attempts('GENERAL' . $m[1], 'LISTENING');
     }
 }
 

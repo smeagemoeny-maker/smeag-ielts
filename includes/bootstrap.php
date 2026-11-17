@@ -177,6 +177,7 @@ function require_login(string $base = ''): array
         header('Location: ' . $base . 'login.php');
         exit;
     }
+    try { regrade_general_listening_once(); } catch (Throwable $e) { error_log('regrade: ' . $e->getMessage()); }
     return $u;
 }
 
@@ -320,9 +321,50 @@ function key_name(string $testSet): string
 
 function answer_key(string $testSet, string $section): ?array
 {
-    $row = q('SELECT answers FROM answer_keys WHERE UPPER(test_name) = ? AND UPPER(course) = ? ORDER BY id DESC LIMIT 1',
-        [key_name($testSet), strtoupper($section)])->fetch();
-    return $row ? json_decode($row['answers'], true) : null;
+    $name = key_name($testSet);
+    $sec = strtoupper($section);
+    // GENERAL N 듣기 = ACADEMIC N 듣기 (같은 음원·같은 문제) → ACADEMIC N 정답을 씀. 없으면 GENERAL N 자기 정답
+    $names = $sec === 'LISTENING' && preg_match('/^GENERAL(\d+)$/', $name, $m) ? ['ACADEMIC' . $m[1], $name] : [$name];
+    foreach ($names as $n) {
+        $row = q('SELECT answers FROM answer_keys WHERE UPPER(test_name) = ? AND UPPER(course) = ? ORDER BY id DESC LIMIT 1',
+            [$n, $sec])->fetch();
+        if ($row) return json_decode($row['answers'], true);
+    }
+    return null;
+}
+
+/** 저장된 점수를 지금 정답으로 다시 채점 (test_set 예: 'GENERAL 19', 'GENERAL19' 모두 됨) → 바뀐 행 수 */
+function regrade_attempts(string $testSet, string $section): int
+{
+    $sec = strtoupper($section);
+    $key = answer_key($testSet, $sec);
+    if (!$key) return 0;
+    $changed = 0;
+    $rows = q("SELECT id, answers, score FROM test_attempts WHERE REPLACE(UPPER(test_set), ' ', '') = ? AND UPPER(section) = ?",
+        [key_name($testSet), $sec])->fetchAll();
+    foreach ($rows as $r) {
+        $given = json_decode((string)$r['answers'], true);
+        if (!is_array($given)) continue;
+        $score = grade($given, $key);
+        if ($score !== (int)$r['score']) {
+            q('UPDATE test_attempts SET score = ? WHERE id = ?', [$score, $r['id']]);
+            $changed++;
+        }
+    }
+    return $changed;
+}
+
+/** 한 번만: GENERAL 듣기 응시를 ACADEMIC 듣기 정답으로 다시 채점 (예전엔 GENERAL 정답이 없어 0점) */
+function regrade_general_listening_once(): void
+{
+    if (!empty($_SESSION['regraded_gl_v1'])) return;
+    $mark = 'regrade-general-listening-v1';
+    if (!q("SELECT 1 FROM activity_log WHERE action = 'System' AND details = ? LIMIT 1", [$mark])->fetchColumn()) {
+        log_activity('system', 'System', $mark);   // 먼저 남겨서 동시에 여러 번 돌지 않게
+        $sets = q("SELECT DISTINCT test_set FROM test_attempts WHERE UPPER(section) = 'LISTENING' AND UPPER(test_set) LIKE 'GENERAL%'")->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($sets as $s) regrade_attempts((string)$s, 'LISTENING');
+    }
+    $_SESSION['regraded_gl_v1'] = true;
 }
 
 function grade(array $given, ?array $key): int

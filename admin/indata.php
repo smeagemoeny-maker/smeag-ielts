@@ -39,7 +39,11 @@ $names = q("SELECT DISTINCT ename FROM users WHERE user_type = 'student' ORDER B
 $where = "user_type = 'student'";
 $params = [];
 if ($ename !== '') { $where .= ' AND ename = ?'; $params[] = $ename; }
-if ($course !== '') { $where .= ' AND course = ?'; $params[] = $course; }
+if ($course !== '') {
+    // 등록 과정이 달라도 그 시험(IELTS ACADEMIC / GENERAL)을 본 학생은 보이게
+    $where .= ' AND (course = ? OR id IN (SELECT user_id FROM test_attempts WHERE test_type = ?))';
+    array_push($params, $course, $course);
+}
 if ($date !== '') {
     $where .= ' AND (id IN (SELECT user_id FROM test_attempts WHERE substr(submitted_at,1,10) = ?)
                   OR id IN (SELECT user_id FROM score_entries WHERE test_date = ?))';
