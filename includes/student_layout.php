@@ -49,10 +49,10 @@ function student_head(string $page, string $title = 'SMEAG'): void
 .resume-btn { background: #ea580c; color: #fff; text-decoration: none; font-weight: 700; padding: 10px 20px; border-radius: 8px; white-space: nowrap; }
 .resume-btn:hover { background: #c2410c; }
 .student-id-bar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin: 0 0 18px; }
-.student-id-bar .sid-card { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px 0 rgba(80, 80, 160, 0.08); padding: 10px 18px; }
-.student-id-bar .sid-icon { width: 38px; height: 38px; border-radius: 50%; background: #6c63ff; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
-.student-id-bar .sid-name { font-weight: 700; color: #333; font-size: 1.02rem; line-height: 1.2; }
-.student-id-bar .sid-id { color: #6c63ff; font-size: 0.88rem; font-weight: 600; }
+.student-id-bar .sid-card { display: flex; align-items: center; gap: 14px; background: #fff; border-radius: 14px; box-shadow: 0 2px 12px 0 rgba(80, 80, 160, 0.08); padding: 12px 22px; }
+.student-id-bar .sid-icon { width: 48px; height: 48px; border-radius: 50%; background: #6c63ff; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
+.student-id-bar .sid-name { font-weight: 700; color: #333; font-size: 1.3rem; line-height: 1.25; }
+.student-id-bar .sid-id { color: #6c63ff; font-size: 1.08rem; font-weight: 600; }
 </style>
 </head>
 <body>
