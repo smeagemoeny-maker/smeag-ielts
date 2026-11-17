@@ -22,6 +22,13 @@ if ($ids) {
 }
 $attempts = q($sql . " ORDER BY submitted_at, CASE section WHEN 'LISTENING' THEN 1 WHEN 'READING' THEN 2 ELSE 3 END", $params)->fetchAll();
 
+// Writing 단어 수 — 시험 화면(writing-layout.js)과 같은 방식: 공백으로 나눈 덩어리 수
+function word_count(string $s): int
+{
+    $s = trim($s);
+    return $s === '' ? 0 : count(preg_split('/\s+/u', $s));
+}
+
 // 영역별 답안 비교 (Check Answer 화면과 같은 내용): 번호 · 학생 답 · 정답 · 결과
 function answer_rows(array $a): array
 {
@@ -56,6 +63,7 @@ function answer_rows(array $a): array
   .ng { color: #d00; font-weight: 700; }
   .sec-head { margin: 22px 0 0; color: #6c63ff; font-size: 15px; }
   .writing { white-space: pre-wrap; border: 1px solid #ddd; padding: 10px 12px; font-size: 13px; margin: 6px 0 14px; }
+  .wc-min { color: #888; font-size: 13px; }
   .detail { break-before: page; }
   .ans tr, .writing { break-inside: avoid; }
   @media print { .noprint { display: none; } }
@@ -104,8 +112,11 @@ function answer_rows(array $a): array
 <?php if ($i === 0): ?><h2>Answer Details</h2><?php endif; ?>
 <?php if ($a['section'] === 'WRITING'): ?>
   <h3 class="sec-head"><?= h($a['test_set']) ?> — Writing</h3>
-  <p><b>Task 1</b></p><div class="writing"><?= h($a['writing_task1'] ?? '') ?></div>
-  <p><b>Task 2</b></p><div class="writing"><?= h($a['writing_task2'] ?? '') ?></div>
+<?php foreach ([1 => 150, 2 => 250] as $t => $min): $txt = (string)($a['writing_task' . $t] ?? ''); $wc = word_count($txt); ?>
+  <p><b>Task <?= $t ?></b> — <span class="<?= $wc < $min ? 'ng' : 'ok' ?>"><?= $wc ?> <?= $wc === 1 ? 'word' : 'words' ?></span>
+     <span class="wc-min">(minimum <?= $min ?>)</span></p>
+  <div class="writing"><?= h($txt) ?></div>
+<?php endforeach; ?>
 <?php else: ?>
   <h3 class="sec-head"><?= h($a['test_set']) ?> — <?= h(ucfirst(strtolower($a['section']))) ?> — Score: <?= (int)$a['score'] ?> / 40</h3>
   <table class="ans">
