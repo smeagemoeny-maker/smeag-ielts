@@ -1,5 +1,6 @@
 /* 원본에서 측정한 값 중 panel-style.css 에 없는 것 (templates/layout_example.html 기준) */
-.sidebar .logo { color: #e74c3c; }
+.sidebar .logo { color: #e74c3c; padding: 0 20px; box-sizing: border-box; width: 100%; text-align: center; }
+.sidebar .logo img { display: block; width: 100%; max-width: 200px; height: auto; margin: 0 auto; }
 .sidebar ul { margin: 0; }
 .topbar .welcome .sub { display: block; font-size: 1rem; font-weight: 400; color: #888; margin-top: 8px; }
 .topbar .user-info .avatar { background: #6c63ff; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; }

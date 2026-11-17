@@ -59,7 +59,7 @@ $sel = fn($k, $val) => (($_POST[$k] ?? '') === $val) ? ' selected' : '';
 
 <div class="register-container">
   <div class="register-header">
-    <h1>Join SMEAG</h1>
+    <img src="images/smeag_logo.png" alt="SMEAG GLOBAL EDUCATION" style="display:block;width:100%;max-width:280px;height:auto;margin:0 auto 16px;">
     <p>Create your account and start your English learning journey</p>
   </div>
 

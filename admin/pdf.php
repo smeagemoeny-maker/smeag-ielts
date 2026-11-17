@@ -33,7 +33,7 @@ $attempts = q($sql . ' ORDER BY submitted_at', $params)->fetchAll();
 </head>
 <body>
 <div class="noprint"><button onclick="window.print()">Print / Save as PDF</button></div>
-<h1>SMEAG</h1>
+<h1><img src="../images/smeag_logo.png" alt="SMEAG GLOBAL EDUCATION" style="display:block;width:240px;height:auto;"></h1>
 <p>Test Score Report</p>
 
 <h2>Student</h2>

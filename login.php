@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="floating-elements"></div>
 <div class="login-container">
   <div class="logo">
-    <h1>SMEAG</h1>
+    <img src="images/smeag_logo.png" alt="SMEAG GLOBAL EDUCATION" style="display:block;width:100%;max-width:280px;height:auto;margin:0 auto 20px;">
     <p>Welcome back! Please sign in to your account.</p>
   </div>
 <?php if ($error): ?>

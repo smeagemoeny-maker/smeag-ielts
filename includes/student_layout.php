@@ -45,7 +45,7 @@ function student_head(string $page, string $title = 'SMEAG'): void
 <body>
 <div class="dashboard-container">
   <nav class="sidebar">
-    <div class="logo">SMEAG</div>
+    <div class="logo"><img src="../images/smeag_logo.png" alt="SMEAG GLOBAL EDUCATION"></div>
     <ul>
 <?php foreach (STUDENT_MENU as $key => [$href, $icon, $label]): ?>
       <li><a href="<?= $href ?>"<?= $key === $page ? ' class="active"' : '' ?>><i class="<?= $icon ?>"></i> <?= $label ?></a></li>
