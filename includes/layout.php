@@ -4,6 +4,7 @@ require_once __DIR__ . '/bootstrap.php';
 
 const MENU = [
     'admin_page' => ['admin_page.php', 'fa-solid fa-table-columns', 'Home'],
+    'accounts'   => ['accounts.php', 'fa-solid fa-user-plus', 'New Account'],
     'etest'      => ['etest.php', 'fa-solid fa-book', 'English TEST'],
     'scores'     => ['scores.php', 'fa-solid fa-chart-bar', 'Scores'],
     'answer'     => ['answer.php', 'fa-solid fa-key', 'Answer'],
