@@ -132,6 +132,7 @@ topbar('Enter Score and Comment', 'You can enter and manage test scores and comm
             <span class="panel-close" onclick="closeCheckPanel()">&times;</span>
           </div>
           <div class="history-bulk">
+            <button type="button" id="selectAllBtn" class="mini-btn check" onclick="toggleAllHistory(!document.getElementById('selectAllHistory').checked)" disabled>Select all</button>
             <button type="button" id="deleteSelectedBtn" class="mini-btn del" onclick="deleteSelected()" disabled>Delete selected</button>
             <span id="selectedCount"></span>
           </div>

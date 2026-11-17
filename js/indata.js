@@ -133,6 +133,9 @@ function updateSelected() {
   head.checked = all.length > 0 && n === all.length;
   head.indeterminate = n > 0 && n < all.length;
   head.disabled = !all.length;
+  const btn = document.getElementById('selectAllBtn');   // 위 "Select all" 버튼 — 다 고르면 "Clear selection"
+  btn.disabled = !all.length;
+  btn.textContent = head.checked ? 'Clear selection' : 'Select all';
   document.getElementById('deleteSelectedBtn').disabled = !n;
   document.getElementById('selectedCount').textContent = n ? n + ' selected' : '';
 }
