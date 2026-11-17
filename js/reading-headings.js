@@ -119,6 +119,30 @@
 
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
+  // 끌어다 놓는 문제 첫 문항 바로 위에 안내 한 줄 ("Move your answer into the gap.")
+  //   첫 빈칸이 있는 줄의 시작(앞의 <br>·블록 다음)을 찾아 그 앞에 넣음. 표 안이면 표 앞에
+  function addHint(first) {
+    if (!first || !first.parentNode) return;
+    let at = first.closest('table') || first;
+    if (at === first) {
+      const BLOCK = /^(BR|DIV|P|TABLE|UL|OL|LI|H\d|CENTER)$/;
+      while (at.previousSibling && !(at.previousSibling.nodeType === 1 && BLOCK.test(at.previousSibling.tagName))) at = at.previousSibling;
+      if (!at.previousSibling && /^(P|LI)$/.test(at.parentNode.tagName)) at = at.parentNode;
+    }
+    const prev = at.previousElementSibling;
+    if (prev && prev.classList.contains('dd-hint')) return;
+    if (!document.getElementById('dd-hint-style')) {
+      const st = document.createElement('style');
+      st.id = 'dd-hint-style';
+      st.textContent = '.dd-hint{margin:8px 0 6px;color:#1a5bb8;font-style:italic;font-weight:600}';
+      document.head.appendChild(st);
+    }
+    const hint = document.createElement('div');
+    hint.className = 'dd-hint';
+    hint.textContent = 'Move your answer into the gap.';
+    at.parentNode.insertBefore(hint, at);
+  }
+
   let styled = false;
   function addStyle() {
     if (styled) return; styled = true;
@@ -243,6 +267,8 @@
       z.inp.focus({ preventScroll: true });   // 아래 문항 번호 바의 현재 문항 표시
     }));
     document.addEventListener('keydown', e => { if (e.key === 'Escape') pick(null); });
+
+    addHint(inputs[0]);
 
     // 자동 저장에서 되살린 값 등 바깥에서 입력칸이 바뀌면 다시 그림
     inputs.forEach(inp => inp.addEventListener('change', () => { if (!dragVal) render(); }));

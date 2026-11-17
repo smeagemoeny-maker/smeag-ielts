@@ -398,7 +398,33 @@
       z.inp.addEventListener('focus', () => z.el.classList.add('mt-cur'));
       z.inp.addEventListener('blur', () => z.el.classList.remove('mt-cur'));
     });
+    // 문서 순서로 첫 빈칸 위에 안내
+    addHint(inputs.slice().sort((a, b) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1)[0]);
     render();
+  }
+
+  // 끌어다 놓는 문제 첫 문항 바로 위에 안내 한 줄 ("Move your answer into the gap.") — js/reading-headings.js 와 같음
+  //   첫 빈칸이 있는 줄의 시작(앞의 <br>·블록 다음)을 찾아 그 앞에 넣음. 표 안이면 표 앞에
+  function addHint(first) {
+    if (!first || !first.parentNode) return;
+    let at = first.closest('table') || first;
+    if (at === first) {
+      const BLOCK = /^(BR|DIV|P|TABLE|UL|OL|LI|H\d|CENTER)$/;
+      while (at.previousSibling && !(at.previousSibling.nodeType === 1 && BLOCK.test(at.previousSibling.tagName))) at = at.previousSibling;
+      if (!at.previousSibling && /^(P|LI)$/.test(at.parentNode.tagName)) at = at.parentNode;
+    }
+    const prev = at.previousElementSibling;
+    if (prev && prev.classList.contains('dd-hint')) return;
+    if (!document.getElementById('dd-hint-style')) {
+      const st = document.createElement('style');
+      st.id = 'dd-hint-style';
+      st.textContent = '.dd-hint{margin:8px 0 6px;color:#1a5bb8;font-style:italic;font-weight:600}';
+      document.head.appendChild(st);
+    }
+    const hint = document.createElement('div');
+    hint.className = 'dd-hint';
+    hint.textContent = 'Move your answer into the gap.';
+    at.parentNode.insertBefore(hint, at);
   }
 
   function init(root) {
