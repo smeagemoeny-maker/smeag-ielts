@@ -38,11 +38,17 @@
 
     // 떠난 횟수: 이 탭(sessionStorage)과 서버(o.count, 이어서 보기) 중 큰 값. 폼의 숨은 칸 _leaves 로 서버에 보냄 (자동 저장·제출)
     if ((+o.count || 0) > store.get(vKey)) store.set(vKey, +o.count);
-    let leavesInput = null;
+    // 전체 화면을 나간 횟수 (Esc 등): 막지는 않고 세기만 함. 같은 방식으로 _fsexits 로 보냄
+    const fKey = 'exam-lock-f-' + (o.key || location.pathname);
+    if ((+o.fsCount || 0) > store.get(fKey)) store.set(fKey, +o.fsCount);
+    let leavesInput = null, fsInput = null;
     if (o.form) {
       leavesInput = document.createElement('input');
       leavesInput.type = 'hidden'; leavesInput.name = '_leaves'; leavesInput.value = String(store.get(vKey));
       o.form.appendChild(leavesInput);
+      fsInput = document.createElement('input');
+      fsInput.type = 'hidden'; fsInput.name = '_fsexits'; fsInput.value = String(store.get(fKey));
+      o.form.appendChild(fsInput);
     }
 
     const style = document.createElement('style');
@@ -101,7 +107,20 @@
       if (!started) { started = true; o.onStart && o.onStart(); }
     });
 
-    // 전체 화면에서 나가는 것(Esc)은 허용 — 위반으로 세지 않음. 다른 창으로 이동(Alt+Tab, 작업 표시줄 클릭 등)
+    // 전체 화면에서 나가는 것(Esc)은 허용 — 경고 없이 횟수만 셈 (fKey). 다른 프로그램으로 넘어가면서 풀린 것은 "떠난 횟수"로만 셈
+    function onFullChange() {
+      if (isFull() || !started || leaving) return;
+      setTimeout(() => {
+        if (leaving || away || quiet || document.hidden || !document.hasFocus() || isFull()) return;
+        store.set(fKey, store.get(fKey) + 1);
+        if (fsInput) fsInput.value = String(store.get(fKey));
+        if (o.onLeave) { try { o.onLeave(store.get(vKey)); } catch (e) {} }
+      }, 400);
+    }
+    document.addEventListener('fullscreenchange', onFullChange);
+    document.addEventListener('webkitfullscreenchange', onFullChange);
+
+    // 다른 창으로 이동(Alt+Tab, 작업 표시줄 클릭 등)
     window.addEventListener('blur', () => setTimeout(() => { if (!document.hasFocus()) violation(); }, 150));
     document.addEventListener('visibilitychange', () => { if (document.hidden) violation(); });
 

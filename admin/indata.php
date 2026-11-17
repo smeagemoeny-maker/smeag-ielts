@@ -132,7 +132,7 @@ topbar('Enter Score and Comment', 'You can enter and manage test scores and comm
             <span class="panel-close" onclick="closeCheckPanel()">&times;</span>
           </div>
           <table class="history-table">
-            <thead><tr><th>Date</th><th>Test Set</th><th>Course</th><th>Subjects</th><th title="Times the student left the test screen (switched to another program) during each skill">Left Test Screen</th><th style="text-align:center">Action</th></tr></thead>
+            <thead><tr><th>Date</th><th>Test Set</th><th>Course</th><th>Subjects</th><th title="Per skill: times the student switched to another program / times the student exited full screen (Esc)">Left Screen / Exited Full Screen</th><th style="text-align:center">Action</th></tr></thead>
             <tbody id="historyBody"></tbody>
           </table>
           <div id="detailResults"></div>

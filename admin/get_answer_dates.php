@@ -5,7 +5,7 @@ require_once __DIR__ . '/../includes/exam_drafts.php';   // attempt_q (leave_cou
 $me = current_user();
 if (!$me || $me['user_type'] !== 'admin') json_out(['success' => false], 401);
 
-$rows = attempt_q('SELECT id, test_set, test_type, section, submitted_at, leave_count FROM test_attempts WHERE user_id = ? ORDER BY submitted_at, id',
+$rows = attempt_q('SELECT id, test_set, test_type, section, submitted_at, leave_count, fs_exit_count FROM test_attempts WHERE user_id = ? ORDER BY submitted_at, id',
     [(int)($_POST['id'] ?? 0)])->fetchAll();
 
 $sessions = [];
@@ -19,7 +19,10 @@ foreach ($rows as $r) {
     }
     $sessions[$i]['ids'][] = (int)$r['id'];
     $sessions[$i]['_secs'][] = $r['section'];
-    $sessions[$i]['_leaves'][$r['section']] = $r['leave_count'] === null ? null : (int)$r['leave_count'];   // 시험 화면을 떠난 횟수 (NULL = 기록 전)
+    $sessions[$i]['_leaves'][$r['section']] = [   // 시험 화면을 떠난 횟수 · 전체 화면을 나간 횟수 (NULL = 기록 전)
+        'count' => $r['leave_count'] === null ? null : (int)$r['leave_count'],
+        'fs' => $r['fs_exit_count'] === null ? null : (int)$r['fs_exit_count'],
+    ];
     $sessions[$i]['_last'] = $t;
 }
 
@@ -27,7 +30,7 @@ $order = ['LISTENING' => 1, 'READING' => 2, 'WRITING' => 3];
 foreach ($sessions as &$s) {
     usort($s['_secs'], fn($a, $b) => ($order[$a] ?? 9) <=> ($order[$b] ?? 9));
     $s['subjects'] = implode(', ', array_map(fn($x) => ucfirst(strtolower($x)), $s['_secs']));
-    $s['leaves'] = array_map(fn($x) => ['subject' => ucfirst(strtolower($x)), 'count' => $s['_leaves'][$x] ?? null], $s['_secs']);
+    $s['leaves'] = array_map(fn($x) => ['subject' => ucfirst(strtolower($x))] + ($s['_leaves'][$x] ?? ['count' => null, 'fs' => null]), $s['_secs']);
     unset($s['_secs'], $s['_leaves'], $s['_last']);
 }
 json_out(['success' => true, 'sessions' => array_reverse($sessions)]);

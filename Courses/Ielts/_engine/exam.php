@@ -13,13 +13,15 @@ $sessKey = "exam_start_{$setName}_$section";
 // 답안 + 사용한 시간 + Listening 음원 위치를 저장. 다시 열면 (다른 PC 여도) 멈춘 곳에서 이어짐. 제출하면 지움.
 $draftWhere = 'user_id = ? AND test_set = ? AND section = ?';
 $draftKey = [$me['id'], $setName, $section];
-$draftCols = 'answers, started_at, updated_at, elapsed, audio_pos, single_mode, leave_count';
-// 시험 화면을 떠난 횟수 (js/exam-lock.js 가 _leaves 로 보냄) — 줄어들지 않음
-function posted_leaves($row): int
+$draftCols = 'answers, started_at, updated_at, elapsed, audio_pos, single_mode, leave_count, fs_exit_count';
+// js/exam-lock.js 가 보내는 횟수 (줄어들지 않음): 시험 화면을 떠난 횟수 _leaves · 전체 화면을 나간 횟수 _fsexits
+function posted_count($row, string $post, string $col): int
 {
-    $n = is_numeric($_POST['_leaves'] ?? null) ? (int)$_POST['_leaves'] : 0;
-    return min(9999, max(0, $n, $row ? (int)$row['leave_count'] : 0));
+    $n = is_numeric($_POST[$post] ?? null) ? (int)$_POST[$post] : 0;
+    return min(9999, max(0, $n, $row ? (int)($row[$col] ?? 0) : 0));
 }
+function posted_leaves($row): int { return posted_count($row, '_leaves', 'leave_count'); }
+function posted_fsexits($row): int { return posted_count($row, '_fsexits', 'fs_exit_count'); }
 
 // 자동 저장 요청 (fetch / sendBeacon). 응시 화면을 열 때 만든 행만 고침 → 제출 뒤 늦게 온 저장은 무시됨
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_autosave'])) {
@@ -33,8 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_autosave'])) {
     $row = draft_q("SELECT $draftCols FROM exam_drafts WHERE $draftWhere", $draftKey)->fetch();
     if (!$row) exit('{"ok":false}');
     [$used, $pos] = draft_progress($row, $_POST['_elapsed'] ?? null, $_POST['_pos'] ?? null);
-    $n = draft_q("UPDATE exam_drafts SET answers = ?, elapsed = ?, audio_pos = ?, leave_count = ?, updated_at = ? WHERE $draftWhere",
-        array_merge([$json, $used, $pos, posted_leaves($row), time()], $draftKey))->rowCount();
+    $n = draft_q("UPDATE exam_drafts SET answers = ?, elapsed = ?, audio_pos = ?, leave_count = ?, fs_exit_count = ?, updated_at = ? WHERE $draftWhere",
+        array_merge([$json, $used, $pos, posted_leaves($row), posted_fsexits($row), time()], $draftKey))->rowCount();
     exit(json_encode(['ok' => $n > 0, 't' => time()]));
 }
 
@@ -45,11 +47,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 2분 여유. 넘으면 무효 처리 (안내 문구대로). Listening 은 시간 제한 없음 (음원 끝 + 30초 뒤 자동 제출)
     $late = $section !== 'listening' && $used > $limit + 120;
     $leaves = posted_leaves($row);
+    $fsExits = posted_fsexits($row);
     if ($section === 'writing') {
         $t1 = $late ? '' : trim((string)($_POST['task1'] ?? ''));
         $t2 = $late ? '' : trim((string)($_POST['task2'] ?? ''));
-        attempt_q('INSERT INTO test_attempts (user_id, test_type, test_set, section, answers, writing_task1, writing_task2, score, submitted_at, leave_count) VALUES (?,?,?,?,?,?,?,0,?,?)',
-            [$me['id'], $testType, $setLabel, $sec, null, $t1, $t2, now(), $leaves]);
+        attempt_q('INSERT INTO test_attempts (user_id, test_type, test_set, section, answers, writing_task1, writing_task2, score, submitted_at, leave_count, fs_exit_count) VALUES (?,?,?,?,?,?,?,0,?,?,?)',
+            [$me['id'], $testType, $setLabel, $sec, null, $t1, $t2, now(), $leaves, $fsExits]);
     } else {
         $given = [];
         for ($i = 1; $i <= 40; $i++) {
@@ -58,8 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $given[] = $late ? '' : trim((string)$v);
         }
         $score = grade($given, answer_key($setLabel, $sec));
-        attempt_q('INSERT INTO test_attempts (user_id, test_type, test_set, section, answers, score, submitted_at, leave_count) VALUES (?,?,?,?,?,?,?,?)',
-            [$me['id'], $testType, $setLabel, $sec, json_encode($given, JSON_UNESCAPED_UNICODE), $score, now(), $leaves]);
+        attempt_q('INSERT INTO test_attempts (user_id, test_type, test_set, section, answers, score, submitted_at, leave_count, fs_exit_count) VALUES (?,?,?,?,?,?,?,?,?)',
+            [$me['id'], $testType, $setLabel, $sec, json_encode($given, JSON_UNESCAPED_UNICODE), $score, now(), $leaves, $fsExits]);
     }
     unset($_SESSION[$sessKey]);
     draft_q("DELETE FROM exam_drafts WHERE $draftWhere", $draftKey);
@@ -84,7 +87,7 @@ if ($draft) {
 }
 $elapsed = $draft ? (int)$draft['elapsed'] : 0;
 // ExamLock: 이 응시의 화면 이탈 횟수 (이어서 보면 서버 값부터) · 응시마다 다른 키
-$lock = ['count' => $draft ? (int)$draft['leave_count'] : 0, 'started' => $_SESSION[$sessKey]];
+$lock = ['count' => $draft ? (int)$draft['leave_count'] : 0, 'fs' => $draft ? (int)$draft['fs_exit_count'] : 0, 'started' => $_SESSION[$sessKey]];
 // 브라우저로 넘길 자동 저장 설정 (서버에 저장된 답안·사용 시간·음원 위치가 있으면 이어서 씀)
 $autosave = [
     'key' => 'ielts-autosave:' . $me['id'] . ':' . $setName . ':' . $section,
@@ -180,7 +183,7 @@ form.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.targe
 // 음원: 재생기 없이 자동 재생 (멈춤·이동 불가). 끝나면 30초 답안 확인 시간 뒤 자동 제출 → Reading 안내
 // 정전 등으로 꺼졌다 다시 열면 저장된 재생 위치부터 이어서 (examSave.pos)
 const CHECK_SECONDS = 30;
-ExamLock.init({ key: <?= json_encode('listening-' . $setName . '-' . $lock['started']) ?>, count: <?= $lock['count'] ?>, form: form, onLeave: function () { examSave.save(); }, title: examSave.resumed ? "Resume Listening Test" : "Listening Test", resumed: examSave.resumed, onStart: function () {
+ExamLock.init({ key: <?= json_encode('listening-' . $setName . '-' . $lock['started']) ?>, count: <?= $lock['count'] ?>, fsCount: <?= $lock['fs'] ?>, form: form, onLeave: function () { examSave.save(); }, title: examSave.resumed ? "Resume Listening Test" : "Listening Test", resumed: examSave.resumed, onStart: function () {
 ExamAudio.start({
   box: document.getElementById("exam-audio"),
   setNo: <?= $setNo ?>,
@@ -286,7 +289,7 @@ function showTime(used) {
 }
 showTime(examSave.elapsed());
 // 전체 화면 + 다른 프로그램으로 넘어가기 막기/경고
-ExamLock.init({ key: <?= json_encode('reading-' . $setName . '-' . $lock['started']) ?>, count: <?= $lock['count'] ?>, form: form, onLeave: function () { examSave.save(); }, title: examSave.resumed ? "Resume Reading Test" : "Reading Test", resumed: examSave.resumed, onStart: function () { examSave.startClock(showTime); } });
+ExamLock.init({ key: <?= json_encode('reading-' . $setName . '-' . $lock['started']) ?>, count: <?= $lock['count'] ?>, fsCount: <?= $lock['fs'] ?>, form: form, onLeave: function () { examSave.save(); }, title: examSave.resumed ? "Resume Reading Test" : "Reading Test", resumed: examSave.resumed, onStart: function () { examSave.startClock(showTime); } });
 </script>
 </body>
 </html>
@@ -361,7 +364,7 @@ function showTime(used) {
 }
 showTime(examSave.elapsed());
 // 전체 화면 + 다른 프로그램으로 넘어가기 막기/경고
-ExamLock.init({ key: <?= json_encode('writing-' . $setName . '-' . $lock['started']) ?>, count: <?= $lock['count'] ?>, form: form, onLeave: function () { examSave.save(); }, title: examSave.resumed ? "Resume Writing Test" : "Writing Test", resumed: examSave.resumed, onStart: function () { examSave.startClock(showTime); } });
+ExamLock.init({ key: <?= json_encode('writing-' . $setName . '-' . $lock['started']) ?>, count: <?= $lock['count'] ?>, fsCount: <?= $lock['fs'] ?>, form: form, onLeave: function () { examSave.save(); }, title: examSave.resumed ? "Resume Writing Test" : "Writing Test", resumed: examSave.resumed, onStart: function () { examSave.startClock(showTime); } });
 </script>
 </body>
 </html>

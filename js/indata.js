@@ -106,7 +106,7 @@ async function openCheckAnswerPanel(s) {
     }
     body.innerHTML = d.sessions.map((r, i) =>
       '<tr><td>' + esc(r.date) + '</td><td><b>' + esc(r.test_set) + '</b></td><td>' + esc(r.test_type) + '</td><td>' + esc(r.subjects) + '</td>'
-      + '<td style="white-space:nowrap">' + (r.leaves || []).map(l => esc(l.subject) + ': ' + leaveText(l.count)).join('<br>') + '</td>'
+      + '<td style="white-space:nowrap">' + (r.leaves || []).map(l => esc(l.subject) + ': ' + leaveText(l.count) + ' / ' + leaveText(l.fs)).join('<br>') + '</td>'
       + '<td style="text-align:center"><button class="mini-btn check" onclick="checkSession(' + i + ')">Check</button>'
       + '<button class="mini-btn pdf" onclick="sessionPdf(' + i + ')">PDF</button>'
       + '<button class="mini-btn del" onclick="deleteSession(' + i + ')">Delete</button></td></tr>').join('');
@@ -147,7 +147,7 @@ async function checkSession(i) {
   let html = '<div class="detail-wrap"><h4>Detailed Results for ' + esc(s.date) + '</h4>';
   for (const sec of d.sections || []) {
     html += '<div class="detail-section"><h5>' + esc(sec.name) + (sec.name !== 'Writing' ? ' — Score: ' + sec.score + ' / 40' : '')
-      + ' — Left test screen: ' + leaveText(sec.leaves) + '</h5>';
+      + ' — Left test screen: ' + leaveText(sec.leaves) + ' — Exited full screen: ' + leaveText(sec.fs) + '</h5>';
     if (sec.name === 'Writing') {
       html += '<table class="detail-table"><tr><th style="width:80px">Task</th><th>Student Answer</th></tr>'
         + '<tr><td>Task 1</td><td><pre>' + esc(sec.task1) + '</pre></td></tr>'

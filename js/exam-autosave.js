@@ -130,6 +130,8 @@
       const extra = { _elapsed: Math.floor(elapsed), _pos: pos.toFixed(1) };
       const lv = form.querySelector('input[name=_leaves]');   // 시험 화면을 떠난 횟수 (js/exam-lock.js)
       if (lv) extra._leaves = lv.value;
+      const fx = form.querySelector('input[name=_fsexits]');  // 전체 화면을 나간 횟수
+      if (fx) extra._fsexits = fx.value;
       return toFormData(collect(form), extra);
     }
     async function saveServer() {
