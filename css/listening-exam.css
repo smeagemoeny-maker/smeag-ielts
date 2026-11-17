@@ -35,6 +35,7 @@ body.lp-body { margin: 0; background: #fff; color: #000; font-family: Arial, Hel
   border: 1px solid #8a8a8a !important; border-radius: 2px !important; background: #fff !important;
   font: 700 14px Arial, Helvetica, sans-serif !important; color: #000 !important; text-align: center !important;
   vertical-align: middle; box-shadow: none !important; outline: none !important;
+  max-width: 100%;
 }
 .legacy-content input.lp-box::placeholder { color: #000; opacity: 1; font-weight: 700; }
 .legacy-content input.lp-box:focus { border: 2px solid #4a90e2 !important; padding: 0 5px !important; }

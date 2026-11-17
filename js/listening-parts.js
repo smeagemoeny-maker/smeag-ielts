@@ -75,7 +75,22 @@
       while (p && p.nodeType === 3 && /^[\s£$€¥#:]*$/.test(p.textContent)) p = p.previousSibling;
       if (p && p.nodeType === 1 && /^(B|STRONG|SPAN)$/.test(p.tagName)
         && clean(p.textContent).replace(/^\(|[).]$/g, '') === String(n)) p.classList.add('lp-num-hidden');
+      fitBox(el);
     });
+  }
+
+  // 답이 길면 입력칸을 글자 길이만큼 넓힘 (기본 폭보다 줄어들지는 않음)
+  let measureCtx;
+  function fitBox(el) {
+    if (!el.classList.contains('lp-box')) return;
+    measureCtx = measureCtx || document.createElement('canvas').getContext('2d');
+    const cs = getComputedStyle(el);
+    measureCtx.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+    const pad = cs.boxSizing !== 'border-box' ? 0 : parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight)
+      + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+    const w = el.value ? Math.ceil(measureCtx.measureText(el.value).width + pad + 8) : 0;
+    if (w) el.style.setProperty('min-width', w + 'px', 'important');
+    else el.style.removeProperty('min-width');
   }
 
   function init(o) {
@@ -166,7 +181,7 @@
       const n = qnum(e.target);
       if (n && n !== curQ) { curQ = n; renderNav(); }
     });
-    form.addEventListener('input', renderNav);
+    form.addEventListener('input', e => { fitBox(e.target); renderNav(); });
     form.addEventListener('change', renderNav);
 
     showPart(curPart);
