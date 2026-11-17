@@ -95,24 +95,59 @@ async function openCheckAnswerPanel(s) {
   document.getElementById('checkTitle').textContent = 'IELTS Test History - ' + s.ename;
   document.getElementById('detailResults').innerHTML = '';
   const body = document.getElementById('historyBody');
-  body.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
+  body.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
+  window._sessions = [];
+  updateSelected();
   panel.style.display = 'block';
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   try {
     const d = await postForm('get_answer_dates.php', { id: s.id, ename: s.ename });
     if (!d.sessions || !d.sessions.length) {
-      body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888">No test history found.</td></tr>';
+      body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888">No test history found.</td></tr>';
       return;
     }
     body.innerHTML = d.sessions.map((r, i) =>
-      '<tr><td>' + esc(r.date) + '</td><td><b>' + esc(r.test_set) + '</b></td><td>' + esc(r.test_type) + '</td><td>' + esc(r.subjects) + '</td>'
+      '<tr><td style="text-align:center"><input type="checkbox" class="history-pick" value="' + i + '" onchange="updateSelected()"></td>'
+      + '<td>' + esc(r.date) + '</td><td><b>' + esc(r.test_set) + '</b></td><td>' + esc(r.test_type) + '</td><td>' + esc(r.subjects) + '</td>'
       + '<td style="white-space:nowrap">' + (r.leaves || []).map(l => esc(l.subject) + ': ' + leaveText(l.count) + ' / ' + leaveText(l.fs)).join('<br>') + '</td>'
       + '<td style="text-align:center"><button class="mini-btn check" onclick="checkSession(' + i + ')">Check</button>'
       + '<button class="mini-btn pdf" onclick="sessionPdf(' + i + ')">PDF</button>'
       + '<button class="mini-btn del" onclick="deleteSession(' + i + ')">Delete</button></td></tr>').join('');
     window._sessions = d.sessions;
   } catch (e) {
-    body.innerHTML = '<tr><td colspan="6" style="color:#d00">Failed to load history.</td></tr>';
+    body.innerHTML = '<tr><td colspan="7" style="color:#d00">Failed to load history.</td></tr>';
+  }
+}
+// ---- 여러 기록 한꺼번에 삭제 (머리 줄 체크박스 = 전체 선택) ----
+function pickedSessions() {
+  return [...document.querySelectorAll('#historyBody .history-pick:checked')].map(c => window._sessions[+c.value]);
+}
+function toggleAllHistory(on) {
+  document.querySelectorAll('#historyBody .history-pick').forEach(c => { c.checked = on; });
+  updateSelected();
+}
+function updateSelected() {
+  const all = document.querySelectorAll('#historyBody .history-pick');
+  const n = pickedSessions().length;
+  const head = document.getElementById('selectAllHistory');
+  head.checked = all.length > 0 && n === all.length;
+  head.indeterminate = n > 0 && n < all.length;
+  head.disabled = !all.length;
+  document.getElementById('deleteSelectedBtn').disabled = !n;
+  document.getElementById('selectedCount').textContent = n ? n + ' selected' : '';
+}
+async function deleteSelected() {
+  const picked = pickedSessions();
+  if (!picked.length) return;
+  const all = picked.length === window._sessions.length;
+  if (!confirm('Delete ' + (all ? 'ALL ' : '') + picked.length + ' test record' + (picked.length === 1 ? '' : 's')
+    + ' for ' + currentCheckUser.ename + '?\n\nThe student\'s answers for these tests will be removed permanently.')) return;
+  try {
+    const d = await postForm('delete_attempts.php', { id: currentCheckUser.id, ids: picked.flatMap(s => s.ids).join(',') });
+    if (!d.success) throw new Error(d.error || 'failed');
+    openCheckAnswerPanel(currentCheckUser);
+  } catch (e) {
+    alert('Could not delete the selected records.');
   }
 }
 // 시험 화면을 떠난 횟수 (null = 이 기록을 남기기 전 응시)
