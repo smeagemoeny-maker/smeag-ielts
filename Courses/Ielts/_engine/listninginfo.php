@@ -20,7 +20,6 @@ tw_head('Listening Test Instructions');
           <li>This is an <strong class="text-purple-600">Individual Skill Test</strong>: only the Listening section is taken.</li>
 <?php endif; ?>
           <li>If the computer shuts down (e.g. a power cut), log in again and click <strong class="text-purple-600">Resume Test</strong> on the home page. Your answers are kept and the audio continues from where it stopped.</li>
-        <li>The test opens in <strong class="text-purple-600">full screen</strong>. You may press <strong class="text-purple-600">Esc</strong> to leave full screen, but do not switch to other programs (e.g. Alt+Tab). If you do, the test is hidden until you return, and the timer keeps running.</li>
           <li>Test your audio volume below before starting.</li>
         </ul>
         <div class="mt-4">

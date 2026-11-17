@@ -72,7 +72,7 @@
       // o.resumed: 정전 등으로 끊겼던 시험 → 답안·남은 시간 (Listening 은 음원 위치) 그대로 이어서
       show('<h2>' + (o.title || 'Test') + '</h2>'
         + (o.resumed ? '<p><b>Your test was interrupted.</b><br>Your answers and remaining time have been restored. The test continues from where you stopped.</p>' : '')
-        + '<p>The test will open in <b>full screen</b> (press <b>Esc</b> to leave full screen).<br>Do not switch to other programs until you submit.</p>'
+        + '<p>Do not switch to other programs until you submit.</p>'
         + '<button type="button" class="el-btn" data-el="go">' + (o.resumed ? 'Continue Test' : 'Start Test') + '</button>');
     }
 
