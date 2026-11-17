@@ -175,7 +175,7 @@ async function deleteSession(i) {
 }
 function sessionPdf(i) {
   const s = window._sessions[i];
-  window.open('pdf.php?' + new URLSearchParams({ id: currentCheckUser.id, course: s.test_type, date: s.date.slice(0, 10), test_set: s.test_set }), '_blank');
+  window.open('pdf.php?' + new URLSearchParams({ id: currentCheckUser.id, course: s.test_type, date: s.date.slice(0, 10), test_set: s.test_set, ids: s.ids.join(',') }), '_blank');
 }
 async function checkSession(i) {
   const s = window._sessions[i];
