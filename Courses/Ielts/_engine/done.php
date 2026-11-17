@@ -7,7 +7,12 @@ if ($isSingle) {
     // 방금 낸 1건만
     $rows = q($sql . ' AND section = ? ORDER BY submitted_at DESC, id DESC LIMIT 1', array_merge($params, [strtoupper($section)]))->fetchAll();
 } else {
-    $rows = q($sql . ' ORDER BY submitted_at', $params)->fetchAll();
+    // 전체 시험: Listening · Reading 의 마지막(최종) 점수만 (같은 날 여러 번 봤어도 한 줄씩, Writing 은 선생님 채점이라 빼고)
+    $rows = [];
+    foreach (['LISTENING', 'READING'] as $s) {
+        $r = q($sql . ' AND section = ? ORDER BY submitted_at DESC, id DESC LIMIT 1', array_merge($params, [$s]))->fetch();
+        if ($r) $rows[] = $r;
+    }
 }
 $title = $isSingle ? ucfirst($section) . ' Test Completed' : 'Test Completed';
 tw_head($title);

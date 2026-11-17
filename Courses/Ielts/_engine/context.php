@@ -56,7 +56,7 @@ function tw_head(string $title): void
 <body class="min-h-screen flex flex-col">
 <nav class="bg-gradient-to-r from-purple-600 to-purple-400 text-white p-4 shadow-lg">
   <div class="container mx-auto flex justify-between items-center">
-    <div class="main-logo"><img src="images/main_logo.svg" alt="SMEAG GLOBAL EDUCATION" class="h-12"></div>
+    <div class="main-logo bg-white rounded-lg px-3 py-1 shadow"><img src="../../../../../images/smeag_logo.png" alt="SMEAG GLOBAL EDUCATION" class="h-10 w-auto block"></div>
   </div>
 </nav>
 <?php
