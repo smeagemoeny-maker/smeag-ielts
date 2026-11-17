@@ -83,6 +83,7 @@
   let measureCtx;
   function fitBox(el) {
     if (!el.classList.contains('lp-box')) return;
+    if (el.classList.contains('hd-input') || el.classList.contains('mt-input')) return;   // 끌어다 놓기 문항의 숨은 입력칸
     measureCtx = measureCtx || document.createElement('canvas').getContext('2d');
     const cs = getComputedStyle(el);
     measureCtx.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
