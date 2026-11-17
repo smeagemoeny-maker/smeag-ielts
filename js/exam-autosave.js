@@ -34,6 +34,7 @@
       const n = baseName(el);
       if (el.type === 'checkbox') { out[n] = out[n] || []; if (el.checked) out[n].push(el.value); }
       else if (el.type === 'radio') { if (el.checked) out[n] = el.value; else if (!(n in out)) out[n] = ''; }
+      else if (/\[\]$/.test(el.getAttribute('name'))) { out[n] = out[n] || []; out[n].push(el.value); }   // 답 두 개 (q30[] and q30[])
       else out[n] = el.value;
     });
     return out;
@@ -43,13 +44,15 @@
   function apply(form, data) {
     if (!data || typeof data !== 'object') return 0;
     let changed = 0;
+    const idx = {};
     fields(form).forEach(el => {
       const n = baseName(el);
       if (!(n in data)) return;
-      const v = data[n];
+      let v = data[n];
       let diff = false;
       if (el.type === 'checkbox') { const on = Array.isArray(v) && v.includes(el.value); diff = el.checked !== on; el.checked = on; }
       else if (el.type === 'radio') { const on = el.value === v; diff = el.checked !== on; el.checked = on; }
+      else if (Array.isArray(v)) { const i = idx[n] = (idx[n] || 0) + 1; v = String(v[i - 1] ?? ''); if (el.value !== v) { el.value = v; diff = true; } }
       else if (typeof v === 'string' && el.value !== v) { el.value = v; diff = true; }
       if (diff) {
         changed++;

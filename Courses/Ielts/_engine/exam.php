@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $given = [];
         for ($i = 1; $i <= 40; $i++) {
             $v = $_POST["q$i"] ?? '';
-            if (is_array($v)) $v = implode(',', array_map('strval', $v));   // 여러 개 고르는 문항 (체크박스 q21[])
+            if (is_array($v)) $v = implode(',', array_filter(array_map('trim', array_map('strval', $v)), fn($x) => $x !== ''));   // 여러 개 고르는 문항 (체크박스 q21[])
             $given[] = $late ? '' : trim((string)$v);
         }
         $score = grade($given, answer_key($setLabel, $sec));

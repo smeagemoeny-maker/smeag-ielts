@@ -209,8 +209,13 @@ const CAMPUSES = ['CAPITAL', 'ENCANTO', 'TARLAC', 'BAYDREAM'];
 const SCHEDULE_TYPES = ['IELTS ACADEMIC', 'IELTS GENERAL', 'TOEIC', 'TOFLE', 'ESL', 'BUSINESS'];
 const SET_COUNT = 30;
 
-// ---------- 채점 ----------
-// 정답 문자열의 '//' 또는 ' / ' 는 허용 답 구분. 비교 전 소문자·공백·구두점 정리 (원본은 엄격 비교였음)
+// ---------- 채점 (Listening · Reading 모든 세트) ----------
+// 정답 칸 쓰는 법:
+//   '//' 또는 ' / '      허용 답 구분           3 // three hours,  6:30(pm) / 6:30
+//   붙여 쓴 '/'          그 낱말만 바꿔도 정답   88 Prince's Street/St.,  8/eight   (12/05 처럼 숫자/숫자는 그대로)
+//   ( )                  있어도 없어도 정답      6:30(pm)
+//   'any two'            목록 중 두 개 (두 칸 문항)   course // flights // camera any two
+// 비교할 때: 대소문자·구두점·공백·하이픈 무시, 숫자 낱말은 숫자로 (three = 3, four-week = 4-week)
 function normalize_answer(string $s): string
 {
     $s = mb_strtolower(trim(stripslashes($s)));
@@ -220,19 +225,89 @@ function normalize_answer(string $s): string
     return trim($s);
 }
 
+/** 비교용 모양: normalize + 숫자 낱말 → 숫자 + 공백·하이픈 없앰 */
+function answer_canon(string $s): string
+{
+    static $num = ['zero' => 0, 'one' => 1, 'two' => 2, 'three' => 3, 'four' => 4, 'five' => 5, 'six' => 6, 'seven' => 7,
+        'eight' => 8, 'nine' => 9, 'ten' => 10, 'eleven' => 11, 'twelve' => 12, 'thirteen' => 13, 'fourteen' => 14,
+        'fifteen' => 15, 'sixteen' => 16, 'seventeen' => 17, 'eighteen' => 18, 'nineteen' => 19, 'twenty' => 20,
+        'thirty' => 30, 'forty' => 40, 'fifty' => 50, 'sixty' => 60, 'seventy' => 70, 'eighty' => 80, 'ninety' => 90];
+    $s = normalize_answer($s);
+    $s = preg_replace_callback('/\b(' . implode('|', array_keys($num)) . ')\b/u', fn($m) => (string)$num[$m[1]], $s);
+    return preg_replace('/[\s\-‐–—]+/u', '', $s);
+}
+
+/** 'any two' 같은 안내 문구 → 골라야 할 개수 (없으면 0) */
+function answer_pick_count(string $key): int
+{
+    return preg_match('/\bany\s+(two|2)\b/iu', $key) ? 2 : (preg_match('/\bany\s+(three|3)\b/iu', $key) ? 3 : 0);
+}
+
+/** 정답 칸 → 허용 답 목록 (//, ' / ', 붙여 쓴 a/b, (선택) 모두 펼침) */
 function answer_alternatives(string $key): array
 {
-    return array_values(array_filter(array_map('trim', preg_split('#\s*//\s*|\s+/\s+#u', $key)), fn($a) => $a !== ''));
+    $key = preg_replace('/\(?\s*\b(in\s+)?any\s+(order|two|2|three|3)\b\s*\)?/iu', '', $key);
+    $out = [];
+    foreach (preg_split('#\s*//\s*|\s+/\s+#u', $key) as $alt) {
+        $alt = trim($alt);
+        if ($alt === '') continue;
+        // 붙여 쓴 '/' (Street/St., 8/eight): 그 낱말을 하나씩 바꾼 모양들 + 원래 모양(km/h). 숫자/숫자(날짜·분수)는 그대로
+        $out[] = $alt;
+        if (str_contains($alt, '(')) $out[] = trim(preg_replace('/\s*\([^)]*\)\s*/u', ' ', $alt));
+        $vars = [''];
+        foreach (preg_split('/(\s+)/u', $alt, -1, PREG_SPLIT_DELIM_CAPTURE) as $tok) {
+            $opts = (str_contains($tok, '/') && !preg_match('#\d/\d#u', $tok))
+                ? array_values(array_filter(explode('/', $tok), fn($x) => $x !== '')) : [$tok];
+            $next = [];
+            foreach ($vars as $v) foreach ($opts as $o) $next[] = $v . $o;
+            $vars = array_slice($next, 0, 32);
+        }
+        foreach ($vars as $v) {
+            $out[] = trim($v);
+            // ( ) 안은 있어도 없어도 정답
+            if (str_contains($v, '(')) $out[] = trim(preg_replace('/\s*\([^)]*\)\s*/u', ' ', $v));
+        }
+    }
+    return array_values(array_unique(array_filter($out, fn($a) => answer_canon($a) !== '')));
 }
 
 function is_correct(?string $given, ?string $key): bool
 {
-    $g = normalize_answer((string)$given);
-    if ($g === '' || $key === null || trim($key) === '') return false;
-    foreach (answer_alternatives($key) as $alt) {
-        if ($g === normalize_answer($alt)) return true;
-        // 공백 차이만 있는 숫자 (0414 847 749 vs 0414847749)
-        if (str_replace(' ', '', $g) === str_replace(' ', '', normalize_answer($alt))) return true;
+    $given = (string)$given;
+    if (normalize_answer($given) === '' || $key === null || trim($key) === '') return false;
+    $alts = answer_alternatives($key);
+    $canonAlts = array_map('answer_canon', $alts);
+    // 답 여러 개 문항 (q30[] → "a,b"): 순서 무관, "," / "and" / "&" 구분 모두 허용
+    $split = fn(string $s): array => array_values(array_filter(
+        preg_split('/\s*[,&]\s*|\s+and\s+/iu', $s), fn($x) => answer_canon($x) !== ''));
+
+    // 'any two': 목록에서 서로 다른 답을 정해진 개수만큼 (하나만 쓰면 오답)
+    if ($pick = answer_pick_count($key)) {
+        $parts = $split($given);
+        if (count($parts) !== $pick) return false;
+        $used = [];
+        foreach ($parts as $p) {
+            $c = answer_canon($p);
+            $hit = false;
+            foreach ($canonAlts as $i => $a) {
+                if ($a === $c && !isset($used[$a])) { $used[$a] = true; $hit = true; break; }
+            }
+            if (!$hit) return false;
+        }
+        return true;
+    }
+
+    $g = answer_canon($given);
+    if (in_array($g, $canonAlts, true)) return true;
+    // 정답 하나에 두 낱말 ("bread and milk" ↔ "milk, bread")
+    $gp = array_map('answer_canon', $split($given));
+    if (count($gp) > 1) {
+        sort($gp);
+        foreach ($alts as $alt) {
+            $ap = array_map('answer_canon', $split($alt));
+            sort($ap);
+            if ($ap === $gp) return true;
+        }
     }
     return false;
 }
