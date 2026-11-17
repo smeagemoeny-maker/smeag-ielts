@@ -22,13 +22,6 @@ if ($ids) {
 }
 $attempts = q($sql . " ORDER BY submitted_at, CASE section WHEN 'LISTENING' THEN 1 WHEN 'READING' THEN 2 ELSE 3 END", $params)->fetchAll();
 
-// Writing 단어 수 — 시험 화면(writing-layout.js)과 같은 방식: 공백으로 나눈 덩어리 수
-function word_count(string $s): int
-{
-    $s = trim($s);
-    return $s === '' ? 0 : count(preg_split('/\s+/u', $s));
-}
-
 // 영역별 답안 비교 (Check Answer 화면과 같은 내용): 번호 · 학생 답 · 정답 · 결과
 function answer_rows(array $a): array
 {
