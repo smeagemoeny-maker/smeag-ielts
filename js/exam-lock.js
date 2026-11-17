@@ -6,7 +6,8 @@
  *     (Ctrl+Alt+Del 은 어떤 웹페이지도 막을 수 없음)
  *   - Esc 는 막지 않음: 한 번 누르면 전체 화면이 풀리고 시험은 일반 창에서 그대로 계속 (경고·횟수 없음)
  *   - 다른 프로그램·창으로 넘어가면 시험지를 가리고 경고 + 횟수 표시, 버튼을 눌러야 돌아옴 (전체 화면도 다시 켬)
- * 사용: ExamLock.init({ key, title, resumed, onStart })   — onStart: 처음 전체 화면이 켜진 뒤 한 번 (Listening 음원 시작, 시간 세기 시작)
+ * 사용: ExamLock.init({ key, title, resumed, onStart, onRestart })   — onStart: 처음 전체 화면이 켜진 뒤 한 번 (Listening 음원 시작, 시간 세기 시작)
+ *   onRestart: (이어서 보는 시험일 때만) [Start from the Beginning] 버튼을 보여 주고, 누르면 확인 뒤 호출 (Promise, 실패하면 throw)
  */
 (function () {
   const store = {
@@ -58,7 +59,11 @@
       + '.el-card p{margin:0 0 14px;color:#555}'
       + '.el-card .el-warn{color:#b00020;font-weight:700}'
       + '.el-btn{background:#1a5bb8;color:#fff;border:0;border-radius:4px;padding:12px 28px;font-size:16px;font-weight:700;cursor:pointer}'
-      + '.el-btn:hover{background:#154a96}';
+      + '.el-btn:hover{background:#154a96}'
+      + '.el-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}'
+      + '.el-btn2{background:#fff;color:#1a5bb8;border:2px solid #1a5bb8;padding:10px 26px}'
+      + '.el-btn2:hover{background:#eef3fb}'
+      + '.el-btn:disabled{opacity:.6;cursor:default}';
     document.head.appendChild(style);
 
     const overlay = document.createElement('div');
@@ -71,9 +76,13 @@
     function showStart() {
       // o.resumed: 정전 등으로 끊겼던 시험 → 답안·남은 시간 (Listening 은 음원 위치) 그대로 이어서
       show('<h2>' + (o.title || 'Test') + '</h2>'
-        + (o.resumed ? '<p><b>Your test was interrupted.</b><br>Your answers and remaining time have been restored. The test continues from where you stopped.</p>' : '')
+        + (o.resumed && o.onRestart
+          ? '<p><b>Your test was interrupted.</b><br>Choose <b>Continue Test</b> to carry on from where you stopped with your answers kept, or <b>Start from the Beginning</b> to take this section again from the start.</p>'
+          : o.resumed ? '<p><b>Your test was interrupted.</b><br>Your answers and remaining time have been restored. The test continues from where you stopped.</p>' : '')
         + '<p>Do not switch to other programs until you submit.</p>'
-        + '<button type="button" class="el-btn" data-el="go">' + (o.resumed ? 'Continue Test' : 'Start Test') + '</button>');
+        + '<div class="el-btns"><button type="button" class="el-btn" data-el="go">' + (o.resumed ? 'Continue Test' : 'Start Test') + '</button>'
+        + (o.resumed && o.onRestart ? '<button type="button" class="el-btn el-btn2" data-el="restart">Start from the Beginning</button>' : '')
+        + '</div>');
     }
 
     function showWarn() {
@@ -94,6 +103,20 @@
     }
 
     overlay.addEventListener('click', async e => {
+      // 정전 뒤 다시 열었을 때: 처음부터 다시 (o.onRestart — 저장된 답안·위치를 지우고 새로 시작)
+      if (e.target.dataset && e.target.dataset.el === 'restart' && !started && o.onRestart) {
+        if (!confirm('Start this section again from the beginning?\n\nAll the answers you have written so far will be deleted.')) return;
+        overlay.querySelectorAll('button').forEach(b => { b.disabled = true; });
+        e.target.textContent = 'Restarting…';
+        leaving = true;
+        try { await o.onRestart(); } catch (err) {
+          leaving = false;
+          overlay.querySelectorAll('button').forEach(b => { b.disabled = false; });
+          e.target.textContent = 'Start from the Beginning';
+          alert('Could not restart the test. Please check the internet connection and try again.');
+        }
+        return;
+      }
       if (!(e.target.dataset && e.target.dataset.el === 'go')) return;
       const ok = await enterFull();
       if (!ok && !isFull()) {

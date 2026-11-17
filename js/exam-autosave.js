@@ -9,7 +9,8 @@
  *   examSave.elapsed()          사용한 시간(초)
  *   examSave.startClock(onTick) 시간 세기 시작 (onTick(사용한 시간) 1초마다)
  *   examSave.pos() / setPos(t)  Listening 음원 위치(초)
- *   examSave.resumed            이어서 보는 시험인지 (답안·시간·음원 위치 중 하나라도 저장돼 있었음)
+ *   examSave.stop()             저장 멈춤 + 이 PC 임시 저장 지움 (처음부터 다시 시작할 때)
+ *   examSave.resumed           이어서 보는 시험인지 (답안·시간·음원 위치 중 하나라도 저장돼 있었음)
  */
 (function () {
   const SERVER_DELAY = 2000, INTERVAL = 10000;
@@ -106,7 +107,7 @@
     let lastLocal = 0;
     function saveProgress(force) {
       const now = Date.now();
-      if (!force && now - lastLocal < 1000) return;
+      if (stopped || (!force && now - lastLocal < 1000)) return;
       lastLocal = now;
       store.set(pKey, { e: elapsed, p: pos, t: now });
     }
@@ -122,8 +123,9 @@
     show(resumed ? '✓ Test resumed where you stopped' : '✓ Autosave on');
 
     // ── 서버 저장 ──
-    let timer = null, sending = false;
+    let timer = null, sending = false, stopped = false;   // stopped: 처음부터 다시 시작 → 더 이상 저장하지 않음
     function saveLocal(synced) {
+      if (stopped) return false;
       return store.set(key, { answers: collect(form), t: Date.now(), synced: !!synced });
     }
     function payload() {
@@ -136,7 +138,7 @@
     }
     async function saveServer() {
       clearTimeout(timer); timer = null;
-      if (sending || !(dirty || pdirty)) return;
+      if (stopped || sending || !(dirty || pdirty)) return;
       if (navigator.onLine === false) { show('Saved on this computer (offline)', true); return; }
       sending = true;
       const wasDirty = dirty;
@@ -172,6 +174,7 @@
 
     // 창을 닫거나 다른 화면으로 갈 때 마지막으로 한 번 더 (서버로는 sendBeacon)
     function flush() {
+      if (stopped) return;
       saveLocal(!dirty);
       saveProgress(true);
       if ((dirty || pdirty) && navigator.sendBeacon) {
@@ -210,6 +213,8 @@
         pos = t; pdirty = true; saveProgress(false);
       },
       clear: () => { store.del(key); store.del(pKey); },
+      // 처음부터 다시: 저장을 멈추고 이 PC 의 임시 저장을 지움 (서버 쪽은 호출한 곳에서 지움)
+      stop: () => { stopped = true; clearTimeout(timer); store.del(key); store.del(pKey); },
     };
   }
 
