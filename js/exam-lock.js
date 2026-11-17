@@ -6,7 +6,7 @@
  *     (Ctrl+Alt+Del 은 어떤 웹페이지도 막을 수 없음)
  *   - Esc 는 막지 않음: 한 번 누르면 전체 화면이 풀리고 시험은 일반 창에서 그대로 계속 (경고·횟수 없음)
  *   - 다른 프로그램·창으로 넘어가면 시험지를 가리고 경고 + 횟수 표시, 버튼을 눌러야 돌아옴 (전체 화면도 다시 켬)
- * 사용: ExamLock.init({ key, title, onStart })   — onStart: 처음 전체 화면이 켜진 뒤 한 번 (Listening 음원 시작 등)
+ * 사용: ExamLock.init({ key, title, resumed, onStart })   — onStart: 처음 전체 화면이 켜진 뒤 한 번 (Listening 음원 시작, 시간 세기 시작)
  */
 (function () {
   const store = {
@@ -54,9 +54,11 @@
     function hide() { overlay.style.display = 'none'; }
 
     function showStart() {
+      // o.resumed: 정전 등으로 끊겼던 시험 → 답안·남은 시간 (Listening 은 음원 위치) 그대로 이어서
       show('<h2>' + (o.title || 'Test') + '</h2>'
+        + (o.resumed ? '<p><b>Your test was interrupted.</b><br>Your answers and remaining time have been restored. The test continues from where you stopped.</p>' : '')
         + '<p>The test will open in <b>full screen</b> (press <b>Esc</b> to leave full screen).<br>Do not switch to other programs until you submit.</p>'
-        + '<button type="button" class="el-btn" data-el="go">Start Test</button>');
+        + '<button type="button" class="el-btn" data-el="go">' + (o.resumed ? 'Continue Test' : 'Start Test') + '</button>');
     }
 
     function showWarn() {

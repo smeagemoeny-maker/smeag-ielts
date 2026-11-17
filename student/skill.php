@@ -36,6 +36,7 @@ student_head('skill', 'Individual Skill Test - SMEAG');
 .sk-set { position: relative; }
 .sk-set .sk-badge { display: block; font-size: .75rem; font-weight: 600; opacity: .85; margin-top: 2px; }
 </style>
+<?php student_resume_box($me); ?>
       <div class="etest-title">Individual Skill Test</div>
       <div class="etest-desc">Practise one IELTS skill at a time. Choose a module and a skill, then pick a test set. Only that section is taken, and your result is shown when you submit.</div>
 

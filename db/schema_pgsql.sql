@@ -90,6 +90,9 @@ CREATE TABLE IF NOT EXISTS exam_drafts (
   answers    TEXT NOT NULL,
   started_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
+  elapsed    INTEGER NOT NULL DEFAULT 0,   -- 시험 화면이 켜져 있던 시간(초) — 정전 동안은 세지 않음
+  audio_pos  REAL NOT NULL DEFAULT 0,      -- Listening 음원 위치(초)
+  single_mode INTEGER NOT NULL DEFAULT 0,  -- Individual Skill Test
   PRIMARY KEY (user_id, test_set, section)
 );
 

@@ -19,7 +19,7 @@ tw_head('Listening Test Instructions');
 <?php if ($isSingle): ?>
           <li>This is an <strong class="text-purple-600">Individual Skill Test</strong>: only the Listening section is taken.</li>
 <?php endif; ?>
-          <li>If the computer shuts down, follow the examiner's instructions.</li>
+          <li>If the computer shuts down (e.g. a power cut), log in again and click <strong class="text-purple-600">Resume Test</strong> on the home page. Your answers are kept and the audio continues from where it stopped.</li>
         <li>The test opens in <strong class="text-purple-600">full screen</strong>. You may press <strong class="text-purple-600">Esc</strong> to leave full screen, but do not switch to other programs (e.g. Alt+Tab). If you do, the test is hidden until you return, and the timer keeps running.</li>
           <li>Test your audio volume below before starting.</li>
         </ul>
@@ -33,7 +33,6 @@ tw_head('Listening Test Instructions');
         <script src="<?= $base ?>js/local-audio.js"></script>
         <script>LocalAudio.mount(document.getElementById('local-audio'), <?= (int)$m[2] ?>, { checkOnly: true });</script>
 <?php endif; ?>
-        <script>try { localStorage.removeItem(<?= json_encode('lp-audio-start-' . $setName) ?>); sessionStorage.removeItem(<?= json_encode('lp-audio-start-' . $setName) ?>); } catch (e) {}</script>
       </div>
       <div class="mt-6 text-right">
         <a href="listeningcorse.php" class="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition">Enter Test</a>

@@ -2,30 +2,18 @@
 // 실제 응시 화면 (listeningcorse / readingcorse / writingcorse 공통)
 // 원본 listeningcorse.php 는 확인하지 못해 화면 구성은 새로 설계. 채점은 서버에서 함 (정답을 페이지에 노출하지 않음)
 require __DIR__ . '/context.php';
+require_once APP_ROOT . '/includes/exam_drafts.php';
 
 $sec = strtoupper($section);
 $minutes = SECTION_MINUTES[$section];
+$limit = $minutes * 60;
 $sessKey = "exam_start_{$setName}_$section";
 
-// ---------- 자동 저장 (정전·인터넷 끊김 대비) ----------
-// exam_drafts: 응시 중인 답안 + 시작 시각. 다른 PC 로 다시 로그인해도 답안과 남은 시간이 이어짐. 제출하면 지움.
-// 기존 DB 에 테이블이 없으면 처음 쓸 때 만듦 (db/schema*.sql 에도 있음)
-const DRAFT_MAX_AGE = 3 * 3600;   // 3시간 지난 임시 답안은 버림 (다음 날 같은 세트를 다시 볼 때 옛 답안이 뜨지 않게)
-function draft_q(string $sql, array $params = []): PDOStatement
-{
-    try {
-        return q($sql, $params);
-    } catch (PDOException $e) {
-        db()->exec('CREATE TABLE IF NOT EXISTS exam_drafts (
-            user_id INTEGER NOT NULL, test_set VARCHAR(30) NOT NULL, section VARCHAR(20) NOT NULL,
-            answers TEXT NOT NULL, started_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
-            PRIMARY KEY (user_id, test_set, section))');
-        if (db_driver() === 'pgsql') db()->exec('ALTER TABLE exam_drafts ENABLE ROW LEVEL SECURITY');
-        return q($sql, $params);
-    }
-}
+// ---------- 자동 저장 · 이어서 보기 (정전·인터넷 끊김 대비) — includes/exam_drafts.php ----------
+// 답안 + 사용한 시간 + Listening 음원 위치를 저장. 다시 열면 (다른 PC 여도) 멈춘 곳에서 이어짐. 제출하면 지움.
 $draftWhere = 'user_id = ? AND test_set = ? AND section = ?';
 $draftKey = [$me['id'], $setName, $section];
+$draftCols = 'answers, started_at, updated_at, elapsed, audio_pos, single_mode';
 
 // 자동 저장 요청 (fetch / sendBeacon). 응시 화면을 열 때 만든 행만 고침 → 제출 뒤 늦게 온 저장은 무시됨
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_autosave'])) {
@@ -36,15 +24,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_autosave'])) {
     }
     $json = json_encode($data, JSON_UNESCAPED_UNICODE);
     if (strlen($json) > 200000) { http_response_code(413); exit('{"ok":false}'); }
-    $n = draft_q("UPDATE exam_drafts SET answers = ?, updated_at = ? WHERE $draftWhere", array_merge([$json, time()], $draftKey))->rowCount();
+    $row = draft_q("SELECT $draftCols FROM exam_drafts WHERE $draftWhere", $draftKey)->fetch();
+    if (!$row) exit('{"ok":false}');
+    [$used, $pos] = draft_progress($row, $_POST['_elapsed'] ?? null, $_POST['_pos'] ?? null);
+    $n = draft_q("UPDATE exam_drafts SET answers = ?, elapsed = ?, audio_pos = ?, updated_at = ? WHERE $draftWhere",
+        array_merge([$json, $used, $pos, time()], $draftKey))->rowCount();
     exit(json_encode(['ok' => $n > 0, 't' => time()]));
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $dStart = draft_q("SELECT started_at FROM exam_drafts WHERE $draftWhere", $draftKey)->fetchColumn();
-    $started = $_SESSION[$sessKey] ?? ($dStart ? (int)$dStart : time());
+    // 사용한 시간 = 시험 화면이 켜져 있던 시간 (정전으로 꺼져 있던 동안은 빼고)
+    $row = draft_q("SELECT $draftCols FROM exam_drafts WHERE $draftWhere", $draftKey)->fetch();
+    $used = $row ? draft_progress($row, $_POST['_elapsed'] ?? null, null)[0] : time() - ($_SESSION[$sessKey] ?? time());
     // 2분 여유. 넘으면 무효 처리 (안내 문구대로). Listening 은 시간 제한 없음 (음원 끝 + 30초 뒤 자동 제출)
-    $late = $section !== 'listening' && time() - $started > ($minutes * 60) + 120;
+    $late = $section !== 'listening' && $used > $limit + 120;
     if ($section === 'writing') {
         $t1 = $late ? '' : trim((string)($_POST['task1'] ?? ''));
         $t2 = $late ? '' : trim((string)($_POST['task2'] ?? ''));
@@ -67,31 +60,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// 시작 시각: 임시 답안이 있으면 그 시각 (다시 로그인·다른 PC 여도 남은 시간 그대로), 없으면 새로 시작
-$draft = draft_q("SELECT answers, started_at, updated_at FROM exam_drafts WHERE $draftWhere", $draftKey)->fetch();
-if ($draft && time() - (int)$draft['started_at'] > DRAFT_MAX_AGE) {
+// 응시 중인 시험이 있으면 이어서 (다시 로그인·다른 PC 여도 답안·남은 시간·음원 위치 그대로), 없으면 새로 시작
+$draft = draft_q("SELECT $draftCols FROM exam_drafts WHERE $draftWhere", $draftKey)->fetch();
+if ($draft && time() - draft_last_seen($draft) > DRAFT_IDLE_MAX) {
     draft_q("DELETE FROM exam_drafts WHERE $draftWhere", $draftKey);
     $draft = false;
 }
 if ($draft) {
     $_SESSION[$sessKey] = (int)$draft['started_at'];
+    if ((int)$draft['single_mode']) $isSingle = $_SESSION[$singleKey] = true;   // 다시 로그인해도 Individual Skill Test 그대로
 } else {
-    if (!isset($_SESSION[$sessKey]) || time() - $_SESSION[$sessKey] > DRAFT_MAX_AGE) $_SESSION[$sessKey] = time();
-    draft_q("INSERT INTO exam_drafts (user_id, test_set, section, answers, started_at, updated_at) VALUES (?, ?, ?, '{}', ?, 0)
-             ON CONFLICT (user_id, test_set, section) DO NOTHING", array_merge($draftKey, [$_SESSION[$sessKey]]));
+    $_SESSION[$sessKey] = time();
+    draft_q("INSERT INTO exam_drafts (user_id, test_set, section, answers, started_at, updated_at, elapsed, audio_pos, single_mode)
+             VALUES (?, ?, ?, '{}', ?, 0, 0, 0, ?)
+             ON CONFLICT (user_id, test_set, section) DO NOTHING", array_merge($draftKey, [$_SESSION[$sessKey], $isSingle ? 1 : 0]));
 }
-$remaining = max(0, $minutes * 60 - (time() - $_SESSION[$sessKey]));
-// 브라우저로 넘길 자동 저장 설정 (서버에 저장된 답안이 있으면 되살릴 때 씀)
+$elapsed = $draft ? (int)$draft['elapsed'] : 0;
+// 브라우저로 넘길 자동 저장 설정 (서버에 저장된 답안·사용 시간·음원 위치가 있으면 이어서 씀)
 $autosave = [
     'key' => 'ielts-autosave:' . $me['id'] . ':' . $setName . ':' . $section,
     'started' => $_SESSION[$sessKey],
+    'elapsed' => $elapsed,
+    'pos' => $draft ? (float)$draft['audio_pos'] : 0,
     'server' => $draft && (int)$draft['updated_at'] > 0
         ? ['answers' => json_decode((string)$draft['answers'], true) ?: [], 't' => (int)$draft['updated_at'] * 1000] : null,
 ];
+// 응시 화면을 다 만든 뒤(문항 바·끌어다 놓기 등) 넣음 → 그 뒤 스크립트에서 examSave (남은 시간·음원 위치) 사용
 function autosave_script(string $base, array $autosave): void
 {
     echo '<script src="' . $base . 'js/exam-autosave.js"></script>' . "\n"
-        . '<script>ExamAutosave.init(document.getElementById("exam-form"), '
+        . '<script>const examSave = ExamAutosave.init(document.getElementById("exam-form"), '
         . json_encode($autosave, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) . ');</script>' . "\n";
 }
 $hasContent = is_file($contentFile);
@@ -154,10 +152,9 @@ if ($section === 'listening') {
 <script src="<?= $base ?>js/exam-lock.js"></script>
 <script>
 const form = document.getElementById("exam-form");
-const AUDIO_KEY = <?= json_encode('lp-audio-start-' . $setName) ?>;
 function submitNow() { form.submit(); }
 // 위 막대 도구: 연결 상태 · Options (제출 / Contrast / Text size) · Notes. 연결이 끊기면 제출을 미뤘다가 다시 연결되면 보냄
-const tools = ExamTools.mount({ form: form, top: document.querySelector(".lp-top"), key: <?= json_encode($me['id'] . ':' . $setName . ':' . $section . ':' . $_SESSION[$sessKey]) ?>, beforeSend: function () { ExamAudio.clear(AUDIO_KEY); } });
+const tools = ExamTools.mount({ form: form, top: document.querySelector(".lp-top"), key: <?= json_encode($me['id'] . ':' . $setName . ':' . $section . ':' . $_SESSION[$sessKey]) ?>, beforeSend: function () { examSave.clear(); } });
 ListeningParts.init({
   root: document.getElementById("exam-content"),
   header: document.getElementById("part-head"),
@@ -167,16 +164,20 @@ ListeningParts.init({
 });
 // Enter 로 실수 제출 막기
 form.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target.tagName === "INPUT") e.preventDefault(); });
-
+</script>
+<?php autosave_script($base, $autosave); /* 화면을 다 만든 뒤 답안 되살리기 → 아래에서 examSave 사용 */ ?>
+<script>
 // 전체 화면 [Start Test] 를 누른 뒤 음원 시작
 // 음원: 재생기 없이 자동 재생 (멈춤·이동 불가). 끝나면 30초 답안 확인 시간 뒤 자동 제출 → Reading 안내
+// 정전 등으로 꺼졌다 다시 열면 저장된 재생 위치부터 이어서 (examSave.pos)
 const CHECK_SECONDS = 30;
-ExamLock.init({ key: <?= json_encode('listening-' . $setName) ?>, title: "Listening Test", onStart: function () {
+ExamLock.init({ key: <?= json_encode('listening-' . $setName) ?>, title: examSave.resumed ? "Resume Listening Test" : "Listening Test", resumed: examSave.resumed, onStart: function () {
 ExamAudio.start({
   box: document.getElementById("exam-audio"),
   setNo: <?= $setNo ?>,
   serverUrl: <?= json_encode($audioUrl) ?>,
-  key: AUDIO_KEY,
+  resumeAt: examSave.pos(),
+  onPos: function (t) { examSave.setPos(t); },
   onEnded: function () {
     let left = CHECK_SECONDS;
     document.getElementById("timer-label").textContent = "Check your answers";
@@ -192,7 +193,6 @@ ExamAudio.start({
 });
 } });
 </script>
-<?php autosave_script($base, $autosave); ?>
 </body>
 </html>
 <?php
@@ -243,10 +243,8 @@ if ($section === 'reading' && $hasContent) {
 <script>
 const form = document.getElementById("exam-form");
 const root = document.getElementById("exam-content");
-// 전체 화면 + 다른 프로그램으로 넘어가기 막기/경고
-ExamLock.init({ key: <?= json_encode('reading-' . $setName) ?>, title: "Reading Test" });
 // 위 막대 도구: 연결 상태 · Options (제출 / Contrast / Text size) · Notes
-const tools = ExamTools.mount({ form: form, top: document.querySelector(".lp-top"), key: <?= json_encode($me['id'] . ':' . $setName . ':' . $section . ':' . $_SESSION[$sessKey]) ?> });
+const tools = ExamTools.mount({ form: form, top: document.querySelector(".lp-top"), key: <?= json_encode($me['id'] . ':' . $setName . ':' . $section . ':' . $_SESSION[$sessKey]) ?>, beforeSend: function () { examSave.clear(); } });
 // "List of Headings" 문제 → 제목을 끌어다 놓기 (Part 나누기보다 먼저)
 ReadingHeadings.init(root);
 ListeningParts.init({
@@ -261,19 +259,23 @@ ListeningParts.init({
 });
 // Enter 로 실수 제출 막기
 form.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target.tagName === "INPUT") e.preventDefault(); });
-// 60분 (서버 시작 시각 기준 남은 시간). 0 이 되면 자동 제출
-let remain = <?= (int)$remaining ?>;
-const timer = document.getElementById("timer");
-(function tick() {
-  const m = Math.floor(remain / 60), s = remain % 60;
-  timer.textContent = String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
-  timer.classList.toggle("rd-low", remain <= 600);
-  if (remain <= 0) { form.submit(); return; }
-  remain--;
-  setTimeout(tick, 1000);
-})();
 </script>
-<?php autosave_script($base, $autosave); ?>
+<?php autosave_script($base, $autosave); /* 화면을 다 만든 뒤 답안 되살리기 → 아래에서 examSave 사용 */ ?>
+<script>
+// 60분 = 시험 화면이 켜져 있던 시간만 셈 (정전으로 꺼져 있던 동안은 멈춤). [Start Test] 를 누르면 시작, 0 이 되면 자동 제출
+const LIMIT = <?= (int)$limit ?>;
+const timer = document.getElementById("timer");
+let timeUp = false;
+function showTime(used) {
+  const r = Math.max(0, Math.ceil(LIMIT - used));
+  timer.textContent = String(Math.floor(r / 60)).padStart(2, "0") + ":" + String(r % 60).padStart(2, "0");
+  timer.classList.toggle("rd-low", r <= 600);
+  if (r <= 0 && !timeUp) { timeUp = true; form.submit(); }
+}
+showTime(examSave.elapsed());
+// 전체 화면 + 다른 프로그램으로 넘어가기 막기/경고
+ExamLock.init({ key: <?= json_encode('reading-' . $setName) ?>, title: examSave.resumed ? "Resume Reading Test" : "Reading Test", resumed: examSave.resumed, onStart: function () { examSave.startClock(showTime); } });
+</script>
 </body>
 </html>
 <?php
@@ -322,10 +324,8 @@ if ($section === 'writing' && $hasContent) {
 <script src="<?= $base ?>js/exam-lock.js"></script>
 <script>
 const form = document.getElementById("exam-form");
-// 전체 화면 + 다른 프로그램으로 넘어가기 막기/경고
-ExamLock.init({ key: <?= json_encode('writing-' . $setName) ?>, title: "Writing Test" });
 // 위 막대 도구: 연결 상태 · Options (제출 / Contrast / Text size) · Notes
-const tools = ExamTools.mount({ form: form, top: document.querySelector(".lp-top"), key: <?= json_encode($me['id'] . ':' . $setName . ':' . $section . ':' . $_SESSION[$sessKey]) ?>, beforeSend: function () { if (writing) writing.clearDraft(); } });
+const tools = ExamTools.mount({ form: form, top: document.querySelector(".lp-top"), key: <?= json_encode($me['id'] . ':' . $setName . ':' . $section . ':' . $_SESSION[$sessKey]) ?>, beforeSend: function () { if (writing) writing.clearDraft(); examSave.clear(); } });
 const writing = WritingLayout.init({
   root: document.getElementById("exam-content"),
   header: document.getElementById("part-head"),
@@ -334,26 +334,31 @@ const writing = WritingLayout.init({
   draftKey: <?= json_encode($me['id'] . ':' . $setName . ':' . $_SESSION[$sessKey]) ?>,
   onSubmit: function () { tools.openSubmission(); }
 });
-function finish() { form.submit(); }   // 임시 저장은 실제로 보낼 때 지움 (ExamTools beforeSend)
-// 60분 (서버 시작 시각 기준 남은 시간). 0 이 되면 자동 제출
-let remain = <?= (int)$remaining ?>;
-const timer = document.getElementById("timer");
-(function tick() {
-  const m = Math.floor(remain / 60), s = remain % 60;
-  timer.textContent = String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
-  timer.classList.toggle("wr-low", remain <= 600);
-  if (remain <= 0) { finish(); return; }
-  remain--;
-  setTimeout(tick, 1000);
-})();
 </script>
-<?php autosave_script($base, $autosave); ?>
+<?php autosave_script($base, $autosave); /* 화면을 다 만든 뒤 답안 되살리기 → 아래에서 examSave 사용 */ ?>
+<script>
+// 60분 = 시험 화면이 켜져 있던 시간만 셈 (정전으로 꺼져 있던 동안은 멈춤). [Start Test] 를 누르면 시작, 0 이 되면 자동 제출
+const LIMIT = <?= (int)$limit ?>;
+const timer = document.getElementById("timer");
+let timeUp = false;
+function showTime(used) {
+  const r = Math.max(0, Math.ceil(LIMIT - used));
+  timer.textContent = String(Math.floor(r / 60)).padStart(2, "0") + ":" + String(r % 60).padStart(2, "0");
+  timer.classList.toggle("wr-low", r <= 600);
+  if (r <= 0 && !timeUp) { timeUp = true; form.submit(); }   // 임시 저장은 실제로 보낼 때 지움 (ExamTools beforeSend)
+}
+showTime(examSave.elapsed());
+// 전체 화면 + 다른 프로그램으로 넘어가기 막기/경고
+ExamLock.init({ key: <?= json_encode('writing-' . $setName) ?>, title: examSave.resumed ? "Resume Writing Test" : "Writing Test", resumed: examSave.resumed, onStart: function () { examSave.startClock(showTime); } });
+</script>
 </body>
 </html>
 <?php
     exit;
 }
 
+// 문제지(content.html)가 없는 세트용 예비 화면: 이어서 보기 시계가 없으므로 예전처럼 시작 시각 기준
+$remaining = max(0, $limit - (time() - $_SESSION[$sessKey]));
 tw_head(ucfirst($section) . ' Test - ' . $setLabel);
 ?>
 <style>

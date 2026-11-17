@@ -19,7 +19,7 @@ tw_head(ucfirst($section) . ' Test Instructions');
         <li>This is an <strong class="text-purple-600">Individual Skill Test</strong>: only the <?= ucfirst($section) ?> section is taken.</li>
 <?php endif; ?>
         <li>Answers not submitted within <strong class="text-purple-600"><?= $min ?> minutes</strong> will be invalidated.</li>
-        <li>If the computer shuts down, follow the examiner's instructions.</li>
+        <li>If the computer shuts down (e.g. a power cut), log in again and click <strong class="text-purple-600">Resume Test</strong> on the home page. Your answers are kept and the timer continues from where it stopped.</li>
         <li>The test opens in <strong class="text-purple-600">full screen</strong>. You may press <strong class="text-purple-600">Esc</strong> to leave full screen, but do not switch to other programs (e.g. Alt+Tab). If you do, the test is hidden until you return, and the timer keeps running.</li>
       </ul>
     </div>

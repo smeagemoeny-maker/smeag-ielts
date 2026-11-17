@@ -2,15 +2,12 @@
  * IELTS Listening 시험 음원 — 재생기를 보여주지 않고 자동 재생. 응시자는 멈추거나 앞뒤로 옮길 수 없음 (음량만 조절)
  *   - 음원: 서버 파일(serverUrl)이 있으면 그것, 없으면 PC 음원 폴더의 "SET N AUDIO.mp3" (js/local-audio.js)
  *   - 브라우저가 소리 자동 재생을 막으면 화면을 덮는 "Start Listening Test" 버튼 한 번으로 시작
- *   - 새로고침해도 처음부터 다시 나오지 않고, 시작한 시각 기준으로 이어서 재생 (localStorage — 브라우저를 껐다 켜도 이어짐)
- * 사용: ExamAudio.start({ box, setNo, serverUrl, key, onEnded })
+ *   - 새로고침·정전 뒤 다시 열면 멈춘 위치(resumeAt)에서 2초 앞부터 이어서 재생. 꺼져 있던 동안은 건너뛰지 않음
+ *     재생 위치는 onPos(초) 로 알려 주고, 저장은 js/exam-autosave.js (이 PC + 서버) 가 함
+ * 사용: ExamAudio.start({ box, setNo, serverUrl, resumeAt, onPos, onEnded })
  */
 (function () {
-  const store = {
-    get(k) { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } },
-    set(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} },
-    del(k) { try { localStorage.removeItem(k); } catch (e) {} },
-  };
+  const REWIND = 2;   // 이어서 재생할 때 몇 초 앞부터 (끊긴 말이 잘리지 않게)
 
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
@@ -52,6 +49,7 @@
     }
 
     audio.addEventListener('ended', finish);
+    audio.addEventListener('timeupdate', () => { if (started && o.onPos) o.onPos(audio.currentTime); });
     // 멈춤 금지: 끝나기 전에 멈추면 바로 다시 재생
     audio.addEventListener('pause', () => { if (started && !done && !audio.ended) audio.play().catch(() => {}); });
     audio.addEventListener('error', () => {
@@ -67,18 +65,16 @@
     const waitMeta = () => audio.readyState >= 1 ? Promise.resolve()
       : new Promise(res => audio.addEventListener('loadedmetadata', res, { once: true }));
 
-    // 재생 시작 (이미 시작했던 시험이면 지난 시간만큼 건너뜀). 브라우저가 막으면 false
+    // 재생 시작 (이어서 보는 시험이면 멈춘 위치부터). 브라우저가 막으면 false
     async function begin() {
-      const t0 = store.get(o.key);
-      if (t0) {
+      const at = +o.resumeAt || 0;
+      if (at > 0) {
         await waitMeta();
-        const off = (Date.now() - t0) / 1000;
-        if (isFinite(audio.duration) && off >= audio.duration - 0.5) { finish(); return true; }
-        audio.currentTime = off;
+        if (isFinite(audio.duration) && at >= audio.duration - 0.5) { finish(); return true; }
+        audio.currentTime = Math.max(0, at - REWIND);
       }
       try { await audio.play(); } catch (e) { return false; }
       started = true;
-      if (!t0) store.set(o.key, Date.now() - audio.currentTime * 1000);
       hideOverlay();
       showPlaying();
       return true;
@@ -141,8 +137,8 @@
       else await loadLocal(false);
     })().catch(err => showOverlay('<h2>Error</h2><p>' + esc(err.message) + '</p>'));
 
-    return { clear: () => store.del(o.key) };
+    return {};
   }
 
-  window.ExamAudio = { start: start, clear: k => store.del(k) };
+  window.ExamAudio = { start: start };
 })();

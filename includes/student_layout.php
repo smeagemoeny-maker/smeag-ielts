@@ -1,6 +1,7 @@
 <?php
 // 학생 공통 레이아웃 — 관리자 화면과 같은 sidebar 디자인 (Home · English TEST · Schedule · Scores · LOGOUT)
 require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/exam_drafts.php';
 
 const STUDENT_MENU = [
     'home'     => ['index.php', 'fa-solid fa-table-columns', 'Home'],
@@ -40,6 +41,13 @@ function student_head(string $page, string $title = 'SMEAG'): void
 .score-card .head { font-weight: 700; color: #333; margin-bottom: 6px; }
 .score-card .vals span { display: inline-block; margin-right: 16px; color: #555; }
 .score-card .comment { margin: 8px 0 0; color: #666; white-space: pre-line; }
+.resume-box { max-width: 700px; margin: 0 auto 28px; background: #fff7ed; border: 2px solid #fb923c; border-radius: 16px; padding: 18px 22px; }
+.resume-box h3 { margin: 0 0 6px; color: #c2410c; font-size: 1.15rem; }
+.resume-box p { margin: 0 0 12px; color: #555; }
+.resume-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid #fed7aa; }
+.resume-row b { color: #333; }
+.resume-btn { background: #ea580c; color: #fff; text-decoration: none; font-weight: 700; padding: 10px 20px; border-radius: 8px; white-space: nowrap; }
+.resume-btn:hover { background: #c2410c; }
 </style>
 </head>
 <body>
@@ -64,9 +72,26 @@ function student_foot(string $extra = ''): void
     echo "    </div>\n  </main>\n</div>\n" . $extra . "\n</body>\n</html>\n";
 }
 
+/** 정전 등으로 끊긴(제출 전) 시험 → "Resume Test" 버튼. 답안·남은 시간·음원 위치 그대로 이어서 */
+function student_resume_box(array $me): void
+{
+    $drafts = active_drafts((int)$me['id']);
+    if (!$drafts) return;
+    ?>
+      <div class="resume-box">
+        <h3><i class="fa-solid fa-rotate-right"></i> Test in progress</h3>
+        <p>Your test was interrupted. Your answers and remaining time are saved. Click <b>Resume Test</b> to continue from where you stopped.</p>
+<?php foreach ($drafts as $d): ?>
+        <div class="resume-row"><b><?= h($d['label']) ?></b><a class="resume-btn" href="../<?= h($d['url']) ?>">Resume Test</a></div>
+<?php endforeach; ?>
+      </div>
+<?php
+}
+
 /** English TEST Courses 카드 + IELTS 세트 목록 (Home · English TEST 공통) */
 function student_courses(array $me): void
 {
+    student_resume_box($me);
     $cards = [
         ['ESL TEST', 'fa-solid fa-book-open', ''],
         ['TOEIC TEST', 'fa-solid fa-book-open', ''],
