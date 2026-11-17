@@ -10,10 +10,13 @@ $attempts = q('SELECT * FROM test_attempts WHERE user_id = ? AND id IN (' . impl
                ORDER BY CASE section WHEN 'LISTENING' THEN 1 WHEN 'READING' THEN 2 ELSE 3 END",
     [(int)($_POST['id'] ?? 0), ...$ids])->fetchAll();
 
+// 시험 화면을 떠난 횟수 (NULL = 기록 전 응시)
+function leaves_of(array $a): ?int { return isset($a['leave_count']) ? (int)$a['leave_count'] : null; }
+
 $sections = [];
 foreach ($attempts as $a) {
     if ($a['section'] === 'WRITING') {
-        $sections[] = ['name' => 'Writing', 'task1' => $a['writing_task1'], 'task2' => $a['writing_task2']];
+        $sections[] = ['name' => 'Writing', 'leaves' => leaves_of($a), 'task1' => $a['writing_task1'], 'task2' => $a['writing_task2']];
         continue;
     }
     $key = answer_key($a['test_set'], $a['section']) ?? [];
@@ -22,6 +25,6 @@ foreach ($attempts as $a) {
     for ($i = 0; $i < 40; $i++) {
         $rows[] = ['no' => $i + 1, 'given' => $given[$i] ?? '', 'correct' => $key[$i] ?? '', 'ok' => is_correct($given[$i] ?? '', $key[$i] ?? '')];
     }
-    $sections[] = ['name' => ucfirst(strtolower($a['section'])), 'score' => (int)$a['score'], 'rows' => $rows];
+    $sections[] = ['name' => ucfirst(strtolower($a['section'])), 'leaves' => leaves_of($a), 'score' => (int)$a['score'], 'rows' => $rows];
 }
 json_out(['success' => true, 'sections' => $sections]);

@@ -36,6 +36,15 @@
     const vKey = 'exam-lock-v-' + (o.key || location.pathname);
     let started = false, leaving = false, quiet = 0, away = false;
 
+    // 떠난 횟수: 이 탭(sessionStorage)과 서버(o.count, 이어서 보기) 중 큰 값. 폼의 숨은 칸 _leaves 로 서버에 보냄 (자동 저장·제출)
+    if ((+o.count || 0) > store.get(vKey)) store.set(vKey, +o.count);
+    let leavesInput = null;
+    if (o.form) {
+      leavesInput = document.createElement('input');
+      leavesInput.type = 'hidden'; leavesInput.name = '_leaves'; leavesInput.value = String(store.get(vKey));
+      o.form.appendChild(leavesInput);
+    }
+
     const style = document.createElement('style');
     style.textContent = '.el-overlay{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:#1f2937}'
       + '.el-card{background:#fff;max-width:540px;width:calc(100% - 32px);padding:30px;border-radius:8px;text-align:center;font:15px/1.6 Arial,Helvetica,sans-serif;color:#222}'
@@ -73,7 +82,9 @@
       if (!started || leaving || quiet || away) return;
       away = true;
       store.set(vKey, store.get(vKey) + 1);
+      if (leavesInput) leavesInput.value = String(store.get(vKey));
       showWarn();
+      if (o.onLeave) { try { o.onLeave(store.get(vKey)); } catch (e) {} }
     }
 
     overlay.addEventListener('click', async e => {

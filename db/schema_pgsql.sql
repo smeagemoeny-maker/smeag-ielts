@@ -36,7 +36,8 @@ CREATE TABLE IF NOT EXISTS test_attempts (
   writing_task1 TEXT,
   writing_task2 TEXT,
   score         INTEGER DEFAULT 0,
-  submitted_at  VARCHAR(19) NOT NULL
+  submitted_at  VARCHAR(19) NOT NULL,
+  leave_count   INTEGER                         -- 시험 화면을 떠난 횟수 (NULL = 기록 전 응시)
 );
 CREATE INDEX IF NOT EXISTS idx_attempts_type ON test_attempts(test_type, section, submitted_at);
 CREATE INDEX IF NOT EXISTS idx_attempts_user ON test_attempts(user_id);
@@ -93,6 +94,7 @@ CREATE TABLE IF NOT EXISTS exam_drafts (
   elapsed    INTEGER NOT NULL DEFAULT 0,   -- 시험 화면이 켜져 있던 시간(초) — 정전 동안은 세지 않음
   audio_pos  REAL NOT NULL DEFAULT 0,      -- Listening 음원 위치(초)
   single_mode INTEGER NOT NULL DEFAULT 0,  -- Individual Skill Test
+  leave_count INTEGER NOT NULL DEFAULT 0,  -- 시험 화면을 떠난 횟수
   PRIMARY KEY (user_id, test_set, section)
 );
 

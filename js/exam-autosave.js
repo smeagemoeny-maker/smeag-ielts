@@ -126,7 +126,12 @@
     function saveLocal(synced) {
       return store.set(key, { answers: collect(form), t: Date.now(), synced: !!synced });
     }
-    function payload() { return toFormData(collect(form), { _elapsed: Math.floor(elapsed), _pos: pos.toFixed(1) }); }
+    function payload() {
+      const extra = { _elapsed: Math.floor(elapsed), _pos: pos.toFixed(1) };
+      const lv = form.querySelector('input[name=_leaves]');   // 시험 화면을 떠난 횟수 (js/exam-lock.js)
+      if (lv) extra._leaves = lv.value;
+      return toFormData(collect(form), extra);
+    }
     async function saveServer() {
       clearTimeout(timer); timer = null;
       if (sending || !(dirty || pdirty)) return;
@@ -193,7 +198,7 @@
 
     if (dirty || pdirty) saveServer();
     return {
-      save: saveServer,
+      save: () => { pdirty = true; saveProgress(true); return saveServer(); },
       resumed: resumed,
       elapsed: () => elapsed,
       startClock: startClock,

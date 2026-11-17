@@ -95,24 +95,30 @@ async function openCheckAnswerPanel(s) {
   document.getElementById('checkTitle').textContent = 'IELTS Test History - ' + s.ename;
   document.getElementById('detailResults').innerHTML = '';
   const body = document.getElementById('historyBody');
-  body.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
+  body.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
   panel.style.display = 'block';
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   try {
     const d = await postForm('get_answer_dates.php', { id: s.id, ename: s.ename });
     if (!d.sessions || !d.sessions.length) {
-      body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#888">No test history found.</td></tr>';
+      body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888">No test history found.</td></tr>';
       return;
     }
     body.innerHTML = d.sessions.map((r, i) =>
       '<tr><td>' + esc(r.date) + '</td><td><b>' + esc(r.test_set) + '</b></td><td>' + esc(r.test_type) + '</td><td>' + esc(r.subjects) + '</td>'
+      + '<td style="white-space:nowrap">' + (r.leaves || []).map(l => esc(l.subject) + ': ' + leaveText(l.count)).join('<br>') + '</td>'
       + '<td style="text-align:center"><button class="mini-btn check" onclick="checkSession(' + i + ')">Check</button>'
       + '<button class="mini-btn pdf" onclick="sessionPdf(' + i + ')">PDF</button>'
       + '<button class="mini-btn del" onclick="deleteSession(' + i + ')">Delete</button></td></tr>').join('');
     window._sessions = d.sessions;
   } catch (e) {
-    body.innerHTML = '<tr><td colspan="5" style="color:#d00">Failed to load history.</td></tr>';
+    body.innerHTML = '<tr><td colspan="6" style="color:#d00">Failed to load history.</td></tr>';
   }
+}
+// 시험 화면을 떠난 횟수 (null = 이 기록을 남기기 전 응시)
+function leaveText(n) {
+  if (n === null || n === undefined) return '<span style="color:#888">—</span>';
+  return n > 0 ? '<b style="color:#b00020">' + n + (n === 1 ? ' time' : ' times') + '</b>' : '<span style="color:#15803d">0</span>';
 }
 function closeCheckPanel() {
   document.getElementById('answerCheckPanel').style.display = 'none';
@@ -140,7 +146,8 @@ async function checkSession(i) {
   const d = await postForm('get_answer_detail.php', { id: currentCheckUser.id, ids: s.ids.join(',') });
   let html = '<div class="detail-wrap"><h4>Detailed Results for ' + esc(s.date) + '</h4>';
   for (const sec of d.sections || []) {
-    html += '<div class="detail-section"><h5>' + esc(sec.name) + (sec.name !== 'Writing' ? ' — Score: ' + sec.score + ' / 40' : '') + '</h5>';
+    html += '<div class="detail-section"><h5>' + esc(sec.name) + (sec.name !== 'Writing' ? ' — Score: ' + sec.score + ' / 40' : '')
+      + ' — Left test screen: ' + leaveText(sec.leaves) + '</h5>';
     if (sec.name === 'Writing') {
       html += '<table class="detail-table"><tr><th style="width:80px">Task</th><th>Student Answer</th></tr>'
         + '<tr><td>Task 1</td><td><pre>' + esc(sec.task1) + '</pre></td></tr>'

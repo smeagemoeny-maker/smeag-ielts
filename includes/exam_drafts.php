@@ -26,10 +26,29 @@ function draft_migrate(): void
         answers TEXT NOT NULL, started_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
         elapsed INTEGER NOT NULL DEFAULT 0, audio_pos REAL NOT NULL DEFAULT 0, single_mode INTEGER NOT NULL DEFAULT 0,
         PRIMARY KEY (user_id, test_set, section))');
-    foreach (['elapsed INTEGER NOT NULL DEFAULT 0', 'audio_pos REAL NOT NULL DEFAULT 0', 'single_mode INTEGER NOT NULL DEFAULT 0'] as $col) {
+    foreach (['elapsed INTEGER NOT NULL DEFAULT 0', 'audio_pos REAL NOT NULL DEFAULT 0', 'single_mode INTEGER NOT NULL DEFAULT 0',
+              'leave_count INTEGER NOT NULL DEFAULT 0'] as $col) {
         try { db()->exec("ALTER TABLE exam_drafts ADD COLUMN $col"); } catch (PDOException) { /* 이미 있음 */ }
     }
     if (db_driver() === 'pgsql') db()->exec('ALTER TABLE exam_drafts ENABLE ROW LEVEL SECURITY');
+    attempts_migrate();
+}
+
+/** test_attempts.leave_count — 시험 중 시험 화면을 떠난 횟수 (다른 프로그램으로 전환). NULL = 기록 전 응시 */
+function attempts_migrate(): void
+{
+    try { db()->exec('ALTER TABLE test_attempts ADD COLUMN leave_count INTEGER'); } catch (PDOException) { /* 이미 있음 */ }
+}
+
+/** 칸이 없는 옛 DB 면 칸을 더하고 다시 실행 */
+function attempt_q(string $sql, array $params = []): PDOStatement
+{
+    try {
+        return q($sql, $params);
+    } catch (PDOException $e) {
+        attempts_migrate();
+        return q($sql, $params);
+    }
 }
 
 /** 마지막으로 진행이 있던 시각 */
