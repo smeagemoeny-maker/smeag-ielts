@@ -59,6 +59,7 @@ function answer_rows(array $a): array
   .wc-min { color: #888; font-size: 13px; }
   .detail { break-before: page; }
   .ans tr, .writing { break-inside: avoid; }
+  .sec-head, .wc-head { break-after: avoid; }
   @media print { .noprint { display: none; } }
 </style>
 </head>
@@ -101,12 +102,12 @@ function answer_rows(array $a): array
 <?php endif; ?>
 
 <?php foreach ($attempts as $i => $a): ?>
-<div<?= $i === 0 ? ' class="detail"' : '' ?>>
+<div<?= $i === 0 || $a['section'] === 'WRITING' ? ' class="detail"' : '' ?>>
 <?php if ($i === 0): ?><h2>Answer Details</h2><?php endif; ?>
 <?php if ($a['section'] === 'WRITING'): ?>
   <h3 class="sec-head"><?= h($a['test_set']) ?> — Writing</h3>
 <?php foreach ([1 => 150, 2 => 250] as $t => $min): $txt = (string)($a['writing_task' . $t] ?? ''); $wc = word_count($txt); ?>
-  <p><b>Task <?= $t ?></b> — <span class="<?= $wc < $min ? 'ng' : 'ok' ?>"><?= $wc ?> <?= $wc === 1 ? 'word' : 'words' ?></span>
+  <p class="wc-head"><b>Task <?= $t ?></b> —<span class="<?= $wc < $min ? 'ng' : 'ok' ?>"><?= $wc ?> <?= $wc === 1 ? 'word' : 'words' ?></span>
      <span class="wc-min">(minimum <?= $min ?>)</span></p>
   <div class="writing"><?= h($txt) ?></div>
 <?php endforeach; ?>
