@@ -1,7 +1,7 @@
 <?php
 // 학생 Scores — 관리자 Scores 와 같은 모양 (시험 탭 · 영역 탭 · Level / Date 검색) + 내 통계 · 최근 점수 추이 · 응시 기록
 //   본인 응시 기록만 보임. Writing 은 온라인 채점이 없어 "Submitted" 로 표시
-//   맨 아래 Test Score Summary: Listening · Reading 영역별 통계 (응시 수 · 평균 · 최고 · 최근) + 세트별 최고 점수
+//   맨 아래 Test Score Summary: 고른 세트 하나의 Listening · Reading 점수 + IELTS 밴드 환산 (환산표 펼쳐 보기)
 require_once __DIR__ . '/../includes/student_layout.php';
 $me = require_student();
 
@@ -48,26 +48,49 @@ if ($hasData) {
     }
 }
 
-// 점수 요약 (Listening · Reading) — 지금 고른 시험 종류의 내 응시 전체 (Level / Date 검색과 상관없이)
+// IELTS 밴드 점수 환산표: [최소 정답 수 => 밴드] (높은 것부터)
+const BANDS = [
+    'LISTENING'  => [39 => 9, 37 => 8.5, 35 => 8, 32 => 7.5, 30 => 7, 26 => 6.5, 23 => 6, 18 => 5.5, 16 => 5, 13 => 4.5, 11 => 4],
+    'READING_AC' => [39 => 9, 37 => 8.5, 35 => 8, 33 => 7.5, 30 => 7, 27 => 6.5, 23 => 6, 19 => 5.5, 15 => 5, 13 => 4.5, 10 => 4, 8 => 3.5, 6 => 3, 4 => 2.5],
+    'READING_GT' => [40 => 9, 39 => 8.5, 37 => 8, 36 => 7.5, 34 => 7, 32 => 6.5, 30 => 6, 27 => 5.5, 23 => 5, 19 => 4.5, 15 => 4, 12 => 3.5, 9 => 3, 6 => 2.5],
+];
+function band_table(string $sec, ?string $dataType): array
+{
+    return BANDS[$sec === 'LISTENING' ? 'LISTENING' : ($dataType === 'IELTS GENERAL' ? 'READING_GT' : 'READING_AC')];
+}
+/** 정답 수 → 밴드 문자열 (표의 가장 낮은 칸보다 적으면 "Below x") */
+function band_of(int $score, array $table): string
+{
+    foreach ($table as $min => $b) if ($score >= $min) return number_format($b, 1);
+    return 'Below ' . number_format(end($table), 1);
+}
+/** 환산표 행: [["39-40", "9.0"], ...] */
+function band_rows(array $table): array
+{
+    $rows = []; $hi = 40;
+    foreach ($table as $min => $b) { $rows[] = [$min === $hi ? (string)$min : $min . '-' . $hi, number_format($b, 1)]; $hi = $min - 1; }
+    return $rows;
+}
+
+// 점수 요약 (Listening · Reading) — 고른 세트 하나의 영역별 점수 (여러 번 봤으면 가장 최근 점수) + 밴드
 $summary = ['LISTENING' => null, 'READING' => null];
-$bySet = [];
+$sumSets = [];
+$sumSet = '';
 if ($dataType) {
-    foreach (array_keys($summary) as $sec) {
-        $st = q('SELECT COUNT(*) n, AVG(score) a, MAX(score) b FROM test_attempts WHERE user_id = ? AND test_type = ? AND section = ?',
-            [$me['id'], $dataType, $sec])->fetch();
-        if (!(int)$st['n']) continue;
-        $last = q('SELECT test_set, score, submitted_at FROM test_attempts WHERE user_id = ? AND test_type = ? AND section = ?
-                   ORDER BY submitted_at DESC, id DESC LIMIT 1', [$me['id'], $dataType, $sec])->fetch();
-        $summary[$sec] = ['n' => (int)$st['n'], 'avg' => round((float)$st['a'], 1), 'best' => (int)$st['b'], 'last' => $last];
+    $sumSets = q("SELECT test_set, MAX(submitted_at) d FROM test_attempts WHERE user_id = ? AND test_type = ? AND section IN ('LISTENING', 'READING')
+                  GROUP BY test_set ORDER BY d DESC", [$me['id'], $dataType])->fetchAll(PDO::FETCH_KEY_PAIR);
+    $want = trim($_GET['set'] ?? '') ?: $level;
+    $sumSet = isset($sumSets[$want]) ? $want : (string)array_key_first($sumSets);
+    $sumSets = array_keys($sumSets);
+    natcasesort($sumSets);
+    if ($sumSet !== '') {
+        foreach (array_keys($summary) as $sec) {
+            $r = q('SELECT score, submitted_at FROM test_attempts WHERE user_id = ? AND test_type = ? AND section = ? AND test_set = ?
+                    ORDER BY submitted_at DESC, id DESC LIMIT 1', [$me['id'], $dataType, $sec, $sumSet])->fetch();
+            if ($r) $summary[$sec] = ['score' => (int)$r['score'], 'date' => substr((string)$r['submitted_at'], 0, 10),
+                                      'band' => band_of((int)$r['score'], band_table($sec, $dataType))];
+        }
     }
-    // 세트별: 영역마다 응시 횟수 · 최고 점수 · 마지막 응시
-    foreach (q("SELECT test_set, section, COUNT(*) n, MAX(score) b, MAX(submitted_at) d FROM test_attempts
-                WHERE user_id = ? AND test_type = ? AND section IN ('LISTENING', 'READING')
-                GROUP BY test_set, section", [$me['id'], $dataType])->fetchAll() as $r) {
-        $bySet[$r['test_set']][$r['section']] = ['n' => (int)$r['n'], 'best' => (int)$r['b']];
-        $bySet[$r['test_set']]['d'] = max($bySet[$r['test_set']]['d'] ?? '', (string)$r['d']);
-    }
-    uksort($bySet, 'strnatcasecmp');
 }
 
 /** 최근 점수 추이 — 한 줄 꺾은선 (0~40 고정 눈금), 점마다 마우스를 올리면 세트·날짜·점수 */
@@ -131,7 +154,15 @@ student_head('scores', 'Scores - SMEAG');
 .sm-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
 .sm-card { border: 1px solid #ecebf5; border-radius: 12px; padding: 16px 18px; }
 .sm-head { font-weight: 700; color: #6c63ff; margin-bottom: 12px; }
-.sm-vals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; text-align: center; }
+.sm-vals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; text-align: center; }
+.sm-vals b.sm-band { color: #6c63ff; }
+.sm-pick { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.sm-pick label { color: #555; font-weight: 600; }
+.sm-pick select { padding: 7px 10px; border: 1px solid #d8d5ee; border-radius: 6px; font-size: .95rem; }
+.sm-conv summary { cursor: pointer; color: #6c63ff; font-weight: 600; margin-bottom: 10px; }
+.sm-conv-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.sm-conv-grid td, .sm-conv-grid th { text-align: center; }
+@media (max-width: 900px) { .sm-conv-grid { grid-template-columns: 1fr; } }
 .sm-vals b { display: block; font-size: 1.5rem; color: #333; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .sm-vals b small { font-size: .85rem; color: #9a96c9; font-weight: 600; }
 .sm-vals span { color: #777; font-size: .85rem; }
@@ -233,39 +264,50 @@ student_head('scores', 'Scores - SMEAG');
         <div class="check-panel-head"><h3>Test Score Summary</h3></div>
 <?php if (!$dataType): ?>
         <div class="student-empty">Online test results for <?= h($type) ?> are not available yet.</div>
-<?php elseif (!$summary['LISTENING'] && !$summary['READING']): ?>
+<?php elseif ($sumSet === ''): ?>
         <div class="student-empty">No listening or reading tests yet.</div>
 <?php else: ?>
+        <form method="get" class="sm-pick">
+<?php foreach ($query as $k => $v): ?>
+          <input type="hidden" name="<?= h($k) ?>" value="<?= h($v) ?>">
+<?php endforeach; ?>
+          <label for="smSet">Test set</label>
+          <select id="smSet" name="set" onchange="this.form.submit()">
+<?php foreach ($sumSets as $s): ?>
+            <option value="<?= h($s) ?>"<?= $s === $sumSet ? ' selected' : '' ?>><?= h($s) ?></option>
+<?php endforeach; ?>
+          </select>
+        </form>
         <div class="sm-cards">
 <?php foreach ($summary as $sec => $s): ?>
           <div class="sm-card">
             <div class="sm-head"><i class="fa-solid <?= $sec === 'LISTENING' ? 'fa-headphones' : 'fa-book-open' ?>"></i> <?= ucfirst(strtolower($sec)) ?></div>
 <?php if (!$s): ?>
-            <div class="sm-none">No <?= strtolower($sec) ?> tests yet.</div>
+            <div class="sm-none">No <?= strtolower($sec) ?> test for <?= h($sumSet) ?> yet.</div>
 <?php else: ?>
             <div class="sm-vals">
-              <div><b><?= $s['n'] ?></b><span>Tests</span></div>
-              <div><b><?= $s['avg'] ?><small> / 40</small></b><span>Average</span></div>
-              <div><b><?= $s['best'] ?><small> / 40</small></b><span>Highest</span></div>
-              <div><b><?= (int)$s['last']['score'] ?><small> / 40</small></b><span>Latest</span></div>
+              <div><b><?= $s['score'] ?><small> / 40</small></b><span>Correct Answers</span></div>
+              <div><b class="sm-band"><?= h($s['band']) ?></b><span>Band Score</span></div>
             </div>
-            <div class="sm-last">Latest: <?= h($s['last']['test_set']) ?> · <?= h(substr((string)$s['last']['submitted_at'], 0, 10)) ?></div>
+            <div class="sm-last"><?= h($sumSet) ?> · <?= h($s['date']) ?></div>
 <?php endif; ?>
           </div>
 <?php endforeach; ?>
         </div>
-        <table class="scores-table sm-table">
-          <tr><th>Level</th><th>Listening (best)</th><th>Reading (best)</th><th>Last taken</th></tr>
-<?php foreach ($bySet as $set => $r): ?>
-          <tr>
-            <td><?= h($set) ?></td>
-<?php foreach (['LISTENING', 'READING'] as $sec): ?>
-            <td><?= isset($r[$sec]) ? '<b>' . $r[$sec]['best'] . '</b> / 40 <span class="sm-n">(' . $r[$sec]['n'] . ' ' . ($r[$sec]['n'] === 1 ? 'try' : 'tries') . ')</span>' : '<span class="sm-n">—</span>' ?></td>
+        <details class="sm-conv">
+          <summary>Band score conversion</summary>
+          <div class="sm-conv-grid">
+<?php foreach (['LISTENING' => 'Listening', 'READING' => 'Reading (' . ($dataType === 'IELTS GENERAL' ? 'General Training' : 'Academic') . ')'] as $sec => $title): ?>
+            <table class="scores-table">
+              <tr><th colspan="2"><?= h($title) ?></th></tr>
+              <tr><th>Correct Answers</th><th>Band Score</th></tr>
+<?php foreach (band_rows(band_table($sec, $dataType)) as [$range, $b]): ?>
+              <tr><td><?= $range ?></td><td><?= $b ?></td></tr>
 <?php endforeach; ?>
-            <td><?= h(substr($r['d'], 0, 10)) ?></td>
-          </tr>
+            </table>
 <?php endforeach; ?>
-        </table>
+          </div>
+        </details>
 <?php endif; ?>
       </div>
 <?php
