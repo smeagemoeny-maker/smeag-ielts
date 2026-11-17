@@ -107,7 +107,8 @@ async function openCheckAnswerPanel(s) {
     body.innerHTML = d.sessions.map((r, i) =>
       '<tr><td>' + esc(r.date) + '</td><td><b>' + esc(r.test_set) + '</b></td><td>' + esc(r.test_type) + '</td><td>' + esc(r.subjects) + '</td>'
       + '<td style="text-align:center"><button class="mini-btn check" onclick="checkSession(' + i + ')">Check</button>'
-      + '<button class="mini-btn pdf" onclick="sessionPdf(' + i + ')">PDF</button></td></tr>').join('');
+      + '<button class="mini-btn pdf" onclick="sessionPdf(' + i + ')">PDF</button>'
+      + '<button class="mini-btn del" onclick="deleteSession(' + i + ')">Delete</button></td></tr>').join('');
     window._sessions = d.sessions;
   } catch (e) {
     body.innerHTML = '<tr><td colspan="5" style="color:#d00">Failed to load history.</td></tr>';
@@ -115,6 +116,18 @@ async function openCheckAnswerPanel(s) {
 }
 function closeCheckPanel() {
   document.getElementById('answerCheckPanel').style.display = 'none';
+}
+async function deleteSession(i) {
+  const s = window._sessions[i];
+  if (!confirm('Delete this test record?\n\n' + s.date + ' · ' + s.test_set + ' · ' + s.subjects
+    + '\n\nThe student\'s answers for this test will be removed permanently.')) return;
+  try {
+    const d = await postForm('delete_attempts.php', { id: currentCheckUser.id, ids: s.ids.join(',') });
+    if (!d.success) throw new Error(d.error || 'failed');
+    openCheckAnswerPanel(currentCheckUser);
+  } catch (e) {
+    alert('Could not delete this record.');
+  }
 }
 function sessionPdf(i) {
   const s = window._sessions[i];
