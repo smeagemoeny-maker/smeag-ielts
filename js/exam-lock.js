@@ -25,6 +25,11 @@
   const EXIT_PASSWORD = '123';
 
   function isFull() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  // 이 브라우저가 전체 화면을 지원하는지 (지원 안 하면 경고만 하고 진행)
+  function fsSupported() {
+    const el = document.documentElement;
+    return !!((el.requestFullscreen || el.webkitRequestFullscreen) && document.fullscreenEnabled !== false);
+  }
 
   function enterFull() {
     const el = document.documentElement;
@@ -186,15 +191,39 @@
       if (unlocked) { away = false; hide(); return; }
       const ok = await enterFull();
       if (!ok && !isFull()) {
-        // 전체 화면을 지원하지 않는 브라우저: 경고만 하고 진행
-        if (!started) { started = true; hide(); o.onStart && o.onStart(); }
-        else { away = false; hide(); }
+        if (!fsSupported()) {
+          // 전체 화면을 지원하지 않는 브라우저: 경고만 하고 진행
+          if (!started) { started = true; hide(); o.onStart && o.onStart(); }
+          else { away = false; hide(); }
+          return;
+        }
+        // 지원하는데 거절됨 (창이 아직 앞에 오지 않았을 때 등) → 버튼을 한 번 더 누르게 함. 전체 화면 없이 시험지로 돌아가지 않음
+        if (started) { away = false; showFsLost(); }
         return;
       }
       away = false;
       hide();
       if (!started) { started = true; o.onStart && o.onStart(); }
+      checkStillFull();
     });
+
+    // 돌아온 뒤 잠깐 사이에 전체 화면이 다시 풀렸으면 (창 전환 직후 등) 다시 가림
+    function checkStillFull() {
+      setTimeout(() => {
+        if (started && !unlocked && !pwOpen && !leaving && !away && fsSupported() && !isFull()) showFsLost();
+      }, 600);
+    }
+
+    // 안전장치: 시험 중 전체 화면이 아닌 채로 시험지를 누르거나 키를 치면 그 순간 전체 화면으로 되돌림
+    function refull() {
+      if (!started || unlocked || pwOpen || leaving || away || isFull() || !fsSupported()) return;
+      enterFull().then(ok => { if (ok) hide(); });
+    }
+    document.addEventListener('pointerdown', e => { if (!overlay.contains(e.target)) refull(); }, true);
+    document.addEventListener('keydown', e => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'F12' || e.code === 'F12')) return;
+      if (!overlay.contains(e.target)) refull();
+    }, true);
 
     // 허락 없이 전체 화면이 풀림 (Esc 길게 누르기 등) → 횟수를 세고 시험지를 가린 뒤 다시 전체 화면으로 돌아오게 함
     // 다른 프로그램으로 넘어가면서 풀린 것은 "떠난 횟수"로만 셈. 감독관 해제(unlocked) 뒤에는 세지 않음
