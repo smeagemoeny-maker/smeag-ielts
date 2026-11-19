@@ -23,19 +23,6 @@ function posted_count($row, string $post, string $col): int
 function posted_leaves($row): int { return posted_count($row, '_leaves', 'leave_count'); }
 function posted_fsexits($row): int { return posted_count($row, '_fsexits', 'fs_exit_count'); }
 
-// 처음부터 다시 (Listening: 정전 뒤 다시 열었을 때 [Start from the Beginning]) — 저장된 답안·음원 위치를 지움.
-// Individual Skill Test 여부는 세션에 남아 있으므로 다시 열면 같은 방식으로 새로 시작됨
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_restart'])) {
-    header('Content-Type: application/json');
-    if ($section !== 'listening') { http_response_code(400); exit('{"ok":false}'); }
-    $row = draft_q("SELECT single_mode FROM exam_drafts WHERE $draftWhere", $draftKey)->fetch();
-    if ($row && (int)$row['single_mode']) $_SESSION[$singleKey] = true;
-    draft_q("DELETE FROM exam_drafts WHERE $draftWhere", $draftKey);
-    unset($_SESSION[$sessKey]);
-    log_activity($me['login_id'], 'Restarted', "$setLabel Listening restarted from the beginning after an interruption");
-    exit('{"ok":true}');
-}
-
 // 자동 저장 요청 (fetch / sendBeacon). 응시 화면을 열 때 만든 행만 고침 → 제출 뒤 늦게 온 저장은 무시됨
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_autosave'])) {
     header('Content-Type: application/json');
@@ -197,15 +184,6 @@ form.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.targe
 // 정전 등으로 꺼졌다 다시 열면 저장된 재생 위치부터 이어서 (examSave.pos)
 const CHECK_SECONDS = 120;   // 음원이 끝난 뒤 답안 확인 시간 (2분)
 ExamLock.init({ key: <?= json_encode('listening-' . $setName . '-' . $lock['started']) ?>, count: <?= $lock['count'] ?>, fsCount: <?= $lock['fs'] ?>, form: form, onLeave: function () { examSave.save(); }, title: examSave.resumed ? "Resume Listening Test" : "Listening Test", resumed: examSave.resumed,
-// 정전 뒤: [Start from the Beginning] → 저장을 멈추고 서버·이 PC 의 답안·음원 위치를 지운 뒤 새로 열기
-onRestart: async function () {
-  const fd = new FormData(); fd.append("_restart", "1");
-  const res = await fetch(location.href, { method: "POST", body: fd, credentials: "same-origin", cache: "no-store" });
-  const j = res.ok ? await res.json().catch(function () { return null; }) : null;
-  if (!j || !j.ok) throw new Error("restart failed");   // 실패하면 자동 저장은 그대로 → [Continue Test] 가능
-  examSave.stop();   // 닫힐 때의 마지막 저장이 옛 답안을 되살리지 않게
-  location.replace(location.pathname);
-},
 onStart: function () {
 ExamAudio.start({
   box: document.getElementById("exam-audio"),

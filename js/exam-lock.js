@@ -4,7 +4,10 @@
  *     → 시험 화면을 열면 화면 전체를 덮는 [Start Test] 버튼 한 번으로 전체 화면 시작
  *   - Chrome / Edge (HTTPS 또는 localhost): Keyboard Lock API 로 Alt+Tab · Windows 키를 페이지가 가로챔
  *     (Ctrl+Alt+Del 은 어떤 웹페이지도 막을 수 없음)
- *   - Esc 는 막지 않음: 한 번 누르면 전체 화면이 풀리고 시험은 일반 창에서 그대로 계속 (경고·횟수 없음)
+ *   - Esc 잠금: Keyboard Lock 에 Escape 를 넣어 한 번 누르는 Esc 는 페이지가 가로챔
+ *     (Chrome 은 Esc 를 2초 이상 누르고 있으면 브라우저가 강제로 풀어 줌 — 웹페이지가 막을 수 없음)
+ *     → 허락 없이 전체 화면이 풀리면 시험지를 가리고 [Return to Full Screen] 버튼을 눌러야 계속 (횟수 셈)
+ *   - 감독관 해제: Ctrl+Shift+F12 → 비밀번호(EXIT_PASSWORD) 입력 → 전체 화면 해제, 이후 일반 창에서 계속
  *   - 다른 프로그램·창으로 넘어가면 시험지를 가리고 경고 + 횟수 표시, 버튼을 눌러야 돌아옴 (전체 화면도 다시 켬)
  * 사용: ExamLock.init({ key, title, resumed, onStart, onRestart })   — onStart: 처음 전체 화면이 켜진 뒤 한 번 (Listening 음원 시작, 시간 세기 시작)
  *   onRestart: (이어서 보는 시험일 때만) [Start from the Beginning] 버튼을 보여 주고, 누르면 확인 뒤 호출 (Promise, 실패하면 throw)
@@ -15,8 +18,11 @@
     set(k, v) { try { sessionStorage.setItem(k, String(v)); } catch (e) {} },
   };
 
-  // Escape 는 넣지 않음 → 한 번 눌러 전체 화면을 나갈 수 있음
-  const KEYS = ['Tab', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight', 'F11', 'ContextMenu'];
+  // Escape 포함 → Esc 한 번으로는 전체 화면이 풀리지 않음
+  const KEYS = ['Escape', 'Tab', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight', 'F11', 'ContextMenu'];
+
+  // 감독관용 전체 화면 해제 비밀번호 (Ctrl+Shift+F12)
+  const EXIT_PASSWORD = '123';
 
   function isFull() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
 
@@ -36,6 +42,7 @@
     o = o || {};
     const vKey = 'exam-lock-v-' + (o.key || location.pathname);
     let started = false, leaving = false, quiet = 0, away = false;
+    let unlocked = false, pwOpen = false;   // unlocked: 감독관이 비밀번호로 전체 화면을 풀어 줌
 
     // 떠난 횟수: 이 탭(sessionStorage)과 서버(o.count, 이어서 보기) 중 큰 값. 폼의 숨은 칸 _leaves 로 서버에 보냄 (자동 저장·제출)
     if ((+o.count || 0) > store.get(vKey)) store.set(vKey, +o.count);
@@ -93,6 +100,61 @@
         + '<button type="button" class="el-btn" data-el="go">Return to the test</button>');
     }
 
+    function showFsLost() {
+      show('<h2>Return to full screen</h2>'
+        + '<p class="el-warn">The test must be taken in full screen.</p>'
+        + '<p>The timer keeps running.</p>'
+        + '<button type="button" class="el-btn" data-el="go">Return to Full Screen</button>');
+    }
+
+    function showPassword() {
+      pwOpen = true;
+      show('<h2>Exit Full Screen</h2>'
+        + '<p>Enter the password to exit full screen.</p>'
+        + '<p><input type="password" data-el="pw" autocomplete="off" style="font-size:16px;padding:8px 10px;width:200px;border:1px solid #bbb;border-radius:4px"></p>'
+        + '<p class="el-warn" data-el="pwmsg" style="display:none">Incorrect password.</p>'
+        + '<div class="el-btns"><button type="button" class="el-btn" data-el="pw-ok">Exit Full Screen</button>'
+        + '<button type="button" class="el-btn el-btn2" data-el="pw-cancel">Cancel</button></div>');
+      const inp = overlay.querySelector('[data-el="pw"]');
+      inp.focus();
+      inp.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter') { ev.preventDefault(); checkPassword(); }
+        else if (ev.key === 'Escape') { ev.preventDefault(); closePassword(); }
+      });
+    }
+
+    function closePassword() {
+      pwOpen = false;
+      if (isFull()) hide(); else showFsLost();
+    }
+
+    function checkPassword() {
+      const inp = overlay.querySelector('[data-el="pw"]');
+      if (!inp) return;
+      if (inp.value !== EXIT_PASSWORD) {
+        inp.value = ''; inp.focus();
+        overlay.querySelector('[data-el="pwmsg"]').style.display = '';
+        return;
+      }
+      pwOpen = false; unlocked = true;
+      if (navigator.keyboard && navigator.keyboard.unlock) { try { navigator.keyboard.unlock(); } catch (e) {} }
+      hide();
+      if (isFull()) {
+        const ex = document.exitFullscreen || document.webkitExitFullscreen;
+        if (ex) { try { Promise.resolve(ex.call(document)).catch(() => {}); } catch (e) {} }
+      }
+    }
+
+    // Ctrl+Shift+F12: 감독관 비밀번호로 전체 화면 해제 / 전체 화면에서 Esc 는 무시
+    document.addEventListener('keydown', e => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'F12' || e.code === 'F12')) {
+        e.preventDefault(); e.stopPropagation();
+        if (started && !away && !unlocked && !pwOpen) showPassword();
+        return;
+      }
+      if (e.key === 'Escape' && started && !unlocked && !pwOpen && isFull()) e.preventDefault();
+    }, true);
+
     function violation() {
       if (!started || leaving || quiet || away) return;
       away = true;
@@ -117,7 +179,11 @@
         }
         return;
       }
+      if (e.target.dataset && e.target.dataset.el === 'pw-ok') { checkPassword(); return; }
+      if (e.target.dataset && e.target.dataset.el === 'pw-cancel') { closePassword(); return; }
       if (!(e.target.dataset && e.target.dataset.el === 'go')) return;
+      // 감독관이 해제한 뒤에는 전체 화면 없이 돌아감
+      if (unlocked) { away = false; hide(); return; }
       const ok = await enterFull();
       if (!ok && !isFull()) {
         // 전체 화면을 지원하지 않는 브라우저: 경고만 하고 진행
@@ -130,13 +196,15 @@
       if (!started) { started = true; o.onStart && o.onStart(); }
     });
 
-    // 전체 화면에서 나가는 것(Esc)은 허용 — 경고 없이 횟수만 셈 (fKey). 다른 프로그램으로 넘어가면서 풀린 것은 "떠난 횟수"로만 셈
+    // 허락 없이 전체 화면이 풀림 (Esc 길게 누르기 등) → 횟수를 세고 시험지를 가린 뒤 다시 전체 화면으로 돌아오게 함
+    // 다른 프로그램으로 넘어가면서 풀린 것은 "떠난 횟수"로만 셈. 감독관 해제(unlocked) 뒤에는 세지 않음
     function onFullChange() {
-      if (isFull() || !started || leaving) return;
+      if (isFull() || !started || leaving || unlocked) return;
       setTimeout(() => {
-        if (leaving || away || quiet || document.hidden || !document.hasFocus() || isFull()) return;
+        if (leaving || unlocked || away || quiet || document.hidden || !document.hasFocus() || isFull()) return;
         store.set(fKey, store.get(fKey) + 1);
         if (fsInput) fsInput.value = String(store.get(fKey));
+        if (!pwOpen) showFsLost();
         if (o.onLeave) { try { o.onLeave(store.get(vKey)); } catch (e) {} }
       }, 400);
     }
