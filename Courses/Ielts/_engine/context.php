@@ -14,7 +14,8 @@ if (!in_array($kind, ['academic', 'general'], true)
     exit('Test not found');
 }
 $setLabel = $m[1] . ' ' . (int)$m[2];                 // ACADEMIC 1
-$testType = 'IELTS ' . $m[1];                          // IELTS ACADEMIC
+$moduleLabel = ucfirst(strtolower($m[1])) . ' ' . (int)$m[2]; // Academic 1 (응시 화면 위 막대 — 감독관이 보기 쉽게)
+$testType = 'IELTS ' . $m[1];                         // IELTS ACADEMIC
 $base = '../../../../../';                             // 앱 루트까지 (페이지 폴더 기준)
 $me = require_login($base);
 

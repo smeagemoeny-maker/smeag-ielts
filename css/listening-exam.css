@@ -6,6 +6,7 @@ body.lp-body { margin: 0; background: #fff; color: #000; font-family: Arial, Hel
 .lp-who { min-width: 180px; line-height: 1.3; }
 .lp-who b { display: block; font-size: 15px; }
 .lp-who span { font-size: 13px; color: #555; }
+.lp-who .lp-set { display: block; font-size: 18px; font-weight: 700; color: #1a3d8f; white-space: nowrap; } /* Academic 1 · Listening — 감독관이 멀리서도 확인 */
 .lp-audio { flex: 1; max-width: 560px; }
 .lp-audio audio { width: 100%; height: 36px; }
 .lp-audio > div > div { padding: 6px 10px !important; }

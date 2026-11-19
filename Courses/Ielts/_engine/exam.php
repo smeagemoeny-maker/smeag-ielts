@@ -127,7 +127,7 @@ if ($section === 'listening') {
 <body class="lp-body">
 <form id="exam-form" method="post">
   <div class="lp-top">
-    <div class="lp-who"><b><?= h($me['ename']) ?></b><span><?= h($setLabel) ?> · Listening</span></div>
+    <div class="lp-who"><b><?= h($me['ename']) ?></b><span class="lp-set"><?= h($moduleLabel) ?> · Listening</span></div>
     <div id="exam-audio" class="lp-audio"></div>
     <div class="lp-status">
       <div id="timer-label">Listening</div>
@@ -228,7 +228,7 @@ if ($section === 'reading' && $hasContent) {
 <body class="lp-body rd-body">
 <form id="exam-form" method="post">
   <div class="lp-top">
-    <div class="lp-who"><b><?= h($me['ename']) ?></b><span><?= h($setLabel) ?> · Reading</span></div>
+    <div class="lp-who"><b><?= h($me['ename']) ?></b><span class="lp-set"><?= h($moduleLabel) ?> · Reading</span></div>
     <div class="lp-status">
       <div id="timer-label">Time Remaining</div>
       <div id="timer">--:--</div>
@@ -315,7 +315,7 @@ if ($section === 'writing' && $hasContent) {
 <body class="lp-body wr-body">
 <form id="exam-form" method="post">
   <div class="lp-top">
-    <div class="lp-who"><b><?= h($me['ename']) ?></b><span><?= h($setLabel) ?> · Writing</span></div>
+    <div class="lp-who"><b><?= h($me['ename']) ?></b><span class="lp-set"><?= h($moduleLabel) ?> · Writing</span></div>
     <div class="lp-status">
       <div id="timer-label">Time Remaining</div>
       <div id="timer">--:--</div>
