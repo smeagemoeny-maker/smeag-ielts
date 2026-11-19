@@ -122,7 +122,7 @@
     window.addEventListener('online', renderNet);
     window.addEventListener('offline', renderNet);
 
-    // 모든 제출 (✓ 버튼, 시간 끝, 음원 끝) 이 form.submit() 을 거치므로 여기서 연결 확인 + 메모 지움
+    // 모든 제출 (Submit 버튼, 시간 끝, 음원 끝) 이 form.submit() 을 거치므로 여기서 연결 확인 + 메모 지움
     const realSubmit = HTMLFormElement.prototype.submit;
     function doSubmit() {
       if (!online()) { pending = true; renderNet(); return; }

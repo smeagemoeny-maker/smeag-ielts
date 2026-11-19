@@ -4,7 +4,7 @@
  *     세트마다 "SECTION n" 표시가 제각각이라 문항 번호로 나눔. 입력칸이 없는 안내문·그림은 바로 뒤 문항의 Part 를 따름.
  *   - 각 Part 위에 회색 안내 상자 ("Part 1 / Listen and answer questions 1–10.")
  *   - 빈칸 입력칸 안에 문항 번호 표시 (원래 앞에 있던 굵은 번호는 숨김), 원래 "SECTION n" 제목은 숨김
- *   - 아래 고정 바: 현재 Part 의 문항 번호 (누르면 그 문항으로), 다른 Part 는 "Part 2  0 of 10", 오른쪽 ✓ = 제출
+ *   - 아래 고정 바: 현재 Part 의 문항 번호 (누르면 그 문항으로), 다른 Part 는 "Part 2  0 of 10", 오른쪽 [Submit] = 제출
  *   - 오른쪽 아래 ← → : 이전 / 다음 문항
  * 사용: ListeningParts.init({ root, header, nav, arrows, onSubmit })
  */
@@ -135,8 +135,7 @@
           + list.map(n => '<button type="button" data-q="' + n + '" class="lp-q'
             + (answered(n) ? ' lp-done' : '') + (n === curQ ? ' lp-cur' : '') + '">' + n + '</button>').join('')
           + '</span></div>';
-      }).join('') + '<button type="button" class="lp-submit" data-submit title="Submit your answers">'
-        + '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="currentColor" stroke-width="3"/></svg></button>';
+      }).join('') + '<button type="button" class="lp-submit" data-submit title="Submit your answers">Submit</button>';
       // 문제지 안의 현재 문항 번호에 테두리 (id="question-N" 이 있는 문제지)
       root.querySelectorAll('.lp-qnum-cur').forEach(el => el.classList.remove('lp-qnum-cur'));
       const qEl = document.getElementById('question-' + curQ);

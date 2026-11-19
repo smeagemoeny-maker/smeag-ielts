@@ -3,7 +3,7 @@
  *   - Task 1 = Part 1, Task 2 = Part 2. 한 번에 하나씩, 왼쪽 문제 / 오른쪽 답안 (가운데 막대를 끌어 폭 조절)
  *   - 회색 안내 상자: "Part 1 / You should spend about 20 minutes on this task. Write at least 150 words."
  *     (원래 문제지의 "WRITING TASK n" 제목·시간·단어 수 안내는 상자가 대신하므로 숨김)
- *   - 답안 아래 "Words: n", 아래 고정 바 "Part 1  0 of 1" (쓴 Part 는 1 of 1), ← → 로 Part 이동, ✓ 제출
+ *   - 답안 아래 "Words: n", 아래 고정 바 "Part 1  0 of 1" (쓴 Part 는 1 of 1), ← → 로 Part 이동, [Submit] 제출
  *   - 새로고침·컴퓨터 꺼짐 대비: 쓰는 중인 답안을 이 브라우저에 임시 저장 (제출하면 지움)
  *   문제지 구조 (60세트 공통): .page × 2 → 그 안 flex div → 반쪽(md:w-1/2) 2개 [문제, textarea]
  * 사용: WritingLayout.init({ root, header, nav, arrows, draftKey, onSubmit })
@@ -84,8 +84,7 @@
             + '<span class="lp-count">' + done + ' of 1</span></button>';
         }
         return '<div class="lp-part lp-part-on wr-part-on' + (done ? ' wr-done' : '') + '"><b>Part ' + p.n + '</b></div>';
-      }).join('') + '<button type="button" class="lp-submit" data-submit title="Submit your answers">'
-        + '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="currentColor" stroke-width="3"/></svg></button>';
+      }).join('') + '<button type="button" class="lp-submit" data-submit title="Submit your answers">Submit</button>';
       arrows.querySelector('[data-step="-1"]').disabled = cur <= 0;
       arrows.querySelector('[data-step="1"]').disabled = cur >= parts.length - 1;
     }
