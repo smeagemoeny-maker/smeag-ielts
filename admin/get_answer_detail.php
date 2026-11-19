@@ -17,7 +17,8 @@ function fs_of(array $a): ?int { return isset($a['fs_exit_count']) ? (int)$a['fs
 $sections = [];
 foreach ($attempts as $a) {
     if ($a['section'] === 'WRITING') {
-        $sections[] = ['name' => 'Writing', 'leaves' => leaves_of($a), 'fs' => fs_of($a), 'task1' => $a['writing_task1'], 'task2' => $a['writing_task2']];
+        $sections[] = ['name' => 'Writing', 'leaves' => leaves_of($a), 'fs' => fs_of($a), 'task1' => $a['writing_task1'], 'task2' => $a['writing_task2'],
+                       'wc1' => word_count($a['writing_task1']), 'wc2' => word_count($a['writing_task2'])];
         continue;
     }
     $key = answer_key($a['test_set'], $a['section']) ?? [];
@@ -28,4 +29,6 @@ foreach ($attempts as $a) {
     }
     $sections[] = ['name' => ucfirst(strtolower($a['section'])), 'leaves' => leaves_of($a), 'fs' => fs_of($a), 'score' => (int)$a['score'], 'rows' => $rows];
 }
-json_out(['success' => true, 'sections' => $sections]);
+// Answer Check PDF 머리말 (Student Name / Student ID)
+$stu = q('SELECT ename, login_id FROM users WHERE id = ?', [(int)($_POST['id'] ?? 0)])->fetch() ?: ['ename' => '', 'login_id' => ''];
+json_out(['success' => true, 'student' => ['ename' => $stu['ename'], 'login_id' => $stu['login_id']], 'sections' => $sections]);

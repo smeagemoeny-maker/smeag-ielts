@@ -180,4 +180,4 @@ topbar('Enter Score and Comment', 'You can enter and manage test scores and comm
           <div id="infoBody">Loading...</div>
         </div>
       </div>
-<?php admin_foot('<script src="../js/indata.js"></script>');
+<?php admin_foot('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>' . "\n" . '<script src="../js/indata.js"></script>');
