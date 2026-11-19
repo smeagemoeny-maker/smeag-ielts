@@ -15,7 +15,7 @@ tw_head('Listening Test Instructions');
         <h3 class="text-lg font-semibold text-purple-600 mt-4">Important Notes:</h3>
         <ul class="list-disc pl-6 text-gray-700 space-y-2">
           <li>The test has <strong class="text-purple-600">4 parts</strong> (Questions 1-10, 11-20, 21-30, 31-40). Use the Part buttons to move between them.</li>
-          <li>When the audio ends, you will have <strong class="text-purple-600">30 seconds</strong> to check your answers. Then your answers are submitted automatically<?= $isSingle ? ' and your result is shown' : ' and the test moves on to Reading' ?>.</li>
+          <li>When the audio ends, you will have <strong class="text-purple-600">2 minutes</strong> to check your answers. Then your answers are submitted automatically<?= $isSingle ? ' and your result is shown' : ' and the test moves on to Reading' ?>.</li>
 <?php if ($isSingle): ?>
           <li>This is an <strong class="text-purple-600">Individual Skill Test</strong>: only the Listening section is taken.</li>
 <?php endif; ?>

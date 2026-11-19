@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 사용한 시간 = 시험 화면이 켜져 있던 시간 (정전으로 꺼져 있던 동안은 빼고)
     $row = draft_q("SELECT $draftCols FROM exam_drafts WHERE $draftWhere", $draftKey)->fetch();
     $used = $row ? draft_progress($row, $_POST['_elapsed'] ?? null, null)[0] : time() - ($_SESSION[$sessKey] ?? time());
-    // 2분 여유. 넘으면 무효 처리 (안내 문구대로). Listening 은 시간 제한 없음 (음원 끝 + 30초 뒤 자동 제출)
+    // 2분 여유. 넘으면 무효 처리 (안내 문구대로). Listening 은 시간 제한 없음 (음원 끝 + 2분 뒤 자동 제출)
     $late = $section !== 'listening' && $used > $limit + 120;
     $leaves = posted_leaves($row);
     $fsExits = posted_fsexits($row);
@@ -125,7 +125,7 @@ $audioUrl = is_file($audioFile) ? 'audio/listening.mp3' : '';
 $setNo = (int)$m[2];
 
 // Listening: 컴퓨터 시험(CD IELTS) 모양의 별도 화면 (css/listening-exam.css + js/listening-parts.js)
-// 시간 제한 없음 → 음원이 끝나면 30초 답안 확인 시간 뒤 자동 제출 (→ Reading 안내)
+// 시간 제한 없음 → 음원이 끝나면 2분 답안 확인 시간 뒤 자동 제출 (→ Reading 안내)
 if ($section === 'listening') {
     ?><!DOCTYPE html>
 <html lang="en">
@@ -193,9 +193,9 @@ form.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.targe
 <?php autosave_script($base, $autosave); /* 화면을 다 만든 뒤 답안 되살리기 → 아래에서 examSave 사용 */ ?>
 <script>
 // 전체 화면 [Start Test] 를 누른 뒤 음원 시작
-// 음원: 재생기 없이 자동 재생 (멈춤·이동 불가). 끝나면 30초 답안 확인 시간 뒤 자동 제출 → Reading 안내
+// 음원: 재생기 없이 자동 재생 (멈춤·이동 불가). 끝나면 2분 답안 확인 시간 뒤 자동 제출 → Reading 안내
 // 정전 등으로 꺼졌다 다시 열면 저장된 재생 위치부터 이어서 (examSave.pos)
-const CHECK_SECONDS = 30;
+const CHECK_SECONDS = 120;   // 음원이 끝난 뒤 답안 확인 시간 (2분)
 ExamLock.init({ key: <?= json_encode('listening-' . $setName . '-' . $lock['started']) ?>, count: <?= $lock['count'] ?>, fsCount: <?= $lock['fs'] ?>, form: form, onLeave: function () { examSave.save(); }, title: examSave.resumed ? "Resume Listening Test" : "Listening Test", resumed: examSave.resumed,
 // 정전 뒤: [Start from the Beginning] → 저장을 멈추고 서버·이 PC 의 답안·음원 위치를 지운 뒤 새로 열기
 onRestart: async function () {
@@ -219,7 +219,7 @@ ExamAudio.start({
     const t = document.getElementById("timer");
     t.classList.add("lp-urgent");
     (function count() {
-      t.textContent = "0:" + String(left).padStart(2, "0");
+      t.textContent = Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
       if (left <= 0) { submitNow(); return; }
       left--;
       setTimeout(count, 1000);
