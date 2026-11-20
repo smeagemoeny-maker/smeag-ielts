@@ -48,6 +48,10 @@ function student_head(string $page, string $title = 'SMEAG'): void
 .resume-row b { color: #333; }
 .resume-btn { background: #ea580c; color: #fff; text-decoration: none; font-weight: 700; padding: 10px 20px; border-radius: 8px; white-space: nowrap; }
 .resume-btn:hover { background: #c2410c; }
+.resume-actions { display: flex; align-items: center; gap: 8px; }
+.resume-actions form { margin: 0; }
+.discard-btn { background: #fff; color: #b91c1c; border: 1px solid #fca5a5; font-weight: 700; padding: 9px 16px; border-radius: 8px; cursor: pointer; }
+.discard-btn:hover { background: #fee2e2; }
 .student-id-bar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin: 0 0 18px; }
 .student-id-bar .sid-card { display: flex; align-items: center; gap: 14px; background: #fff; border-radius: 14px; box-shadow: 0 2px 12px 0 rgba(80, 80, 160, 0.08); padding: 12px 22px; }
 .student-id-bar .sid-icon { width: 48px; height: 48px; border-radius: 50%; background: #6c63ff; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
@@ -88,12 +92,22 @@ function student_resume_box(array $me): void
 {
     $drafts = active_drafts((int)$me['id']);
     if (!$drafts) return;
+    $canDiscard = can_discard_drafts($me);
     ?>
       <div class="resume-box">
         <h3><i class="fa-solid fa-rotate-right"></i> Test in progress</h3>
         <p>Your test was interrupted. Your answers and remaining time are saved. Click <b>Resume Test</b> to continue from where you stopped.</p>
 <?php foreach ($drafts as $d): ?>
-        <div class="resume-row"><b><?= h($d['label']) ?></b><a class="resume-btn" href="../<?= h($d['url']) ?>">Resume Test</a></div>
+        <div class="resume-row"><b><?= h($d['label']) ?></b>
+          <span class="resume-actions">
+<?php if ($canDiscard): ?>
+            <form method="post" action="discard_draft.php" onsubmit="return confirm('Discard this test in progress?\n\n<?= h($d['label']) ?>\n\nThe saved answers will be deleted.')">
+              <input type="hidden" name="set" value="<?= h($d['set']) ?>"><input type="hidden" name="section" value="<?= h($d['section']) ?>">
+              <button type="submit" class="discard-btn">Discard</button>
+            </form>
+<?php endif; ?>
+            <a class="resume-btn" href="../<?= h($d['url']) ?>">Resume Test</a>
+          </span></div>
 <?php endforeach; ?>
       </div>
 <?php

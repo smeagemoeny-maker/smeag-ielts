@@ -8,6 +8,12 @@
 require_once __DIR__ . '/bootstrap.php';
 
 const DRAFT_IDLE_MAX = 12 * 3600;   // 12시간 동안 아무 진행이 없으면 버림 (다음 날 같은 세트를 다시 볼 때 옛 답안이 뜨지 않게)
+const DRAFT_DISCARD_USERS = ['s2025001'];   // "Resume Test" 옆 Discard 버튼이 보이는 계정 (student/discard_draft.php)
+
+function can_discard_drafts(array $me): bool
+{
+    return in_array((string)($me['login_id'] ?? ''), DRAFT_DISCARD_USERS, true);
+}
 
 function draft_q(string $sql, array $params = []): PDOStatement
 {
@@ -92,6 +98,8 @@ function active_drafts(int $userId): array
             'label' => $m[1] . ' ' . (int)$m[2] . ' · ' . ucfirst($sec),
             'url' => "Courses/Ielts/$kind/{$r['test_set']}/$sec/{$sec}corse.php",
             'seen' => draft_last_seen($r),
+            'set' => (string)$r['test_set'],
+            'section' => $sec,
         ];
     }
     usort($out, fn($a, $b) => $b['seen'] <=> $a['seen']);
