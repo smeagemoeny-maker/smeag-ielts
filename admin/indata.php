@@ -135,13 +135,8 @@ topbar('Enter Score and Comment', 'You can enter and manage test scores and comm
             <h3 id="checkTitle">IELTS Test History</h3>
             <span class="panel-close" onclick="closeCheckPanel()">&times;</span>
           </div>
-          <div class="history-bulk">
-            <button type="button" id="selectAllBtn" class="mini-btn check" onclick="toggleAllHistory(!document.getElementById('selectAllHistory').checked)" disabled>Select all</button>
-            <button type="button" id="deleteSelectedBtn" class="mini-btn del" onclick="deleteSelected()" disabled>Delete selected</button>
-            <span id="selectedCount"></span>
-          </div>
           <table class="history-table">
-            <thead><tr><th style="width:34px;text-align:center"><input type="checkbox" id="selectAllHistory" title="Select all" onchange="toggleAllHistory(this.checked)"></th><th>Date</th><th>Test Set</th><th>Course</th><th>Subjects</th><th title="Per skill: times the student switched to another program / times the student exited full screen (Esc)">Left Screen / Exited Full Screen</th><th style="text-align:center">Action</th></tr></thead>
+            <thead><tr><th>Date</th><th>Test Set</th><th>Course</th><th>Subjects</th><th title="Per skill: times the student switched to another program / times the student exited full screen (Esc)">Left Screen / Exited Full Screen</th><th style="text-align:center">Action</th></tr></thead>
             <tbody id="historyBody"></tbody>
           </table>
           <div id="detailResults"></div>
