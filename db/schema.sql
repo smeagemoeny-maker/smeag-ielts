@@ -49,7 +49,7 @@ CREATE INDEX IF NOT EXISTS idx_attempts_user ON test_attempts(user_id);
 CREATE TABLE IF NOT EXISTS score_entries (
   id                 INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id            INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  test_type          VARCHAR(30) NOT NULL,      -- ESL / TOEIC / TOFLE / IELTS ACADEMIC / IELTS GENERAL / BUSINESS
+  test_type          VARCHAR(30) NOT NULL,      -- ESL / TOEIC / TOEFL / IELTS ACADEMIC / IELTS GENERAL / BUSINESS
   test_date          DATE NOT NULL,
   listening_score    VARCHAR(10),
   reading_score      VARCHAR(10),

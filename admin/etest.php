@@ -5,7 +5,7 @@ require_admin();
 $cards = [
     ['ESL TEST', 'fa-solid fa-book-open', ''],
     ['TOEIC TEST', 'fa-solid fa-book-open', ''],
-    ['TOFLE TEST', 'fa-solid fa-book-open', ''],
+    ['TOEFL TEST', 'fa-solid fa-book-open', ''],
     ['IELTS ACADEMIC TEST', 'fa-solid fa-book-open', 'academic'],
     ['IELTS GENERAL TEST', 'fa-solid fa-book-open', 'general'],
     ['BUSINESS TEST', 'fa-solid fa-book-open', ''],

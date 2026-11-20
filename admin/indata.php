@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/layout.php';
 $me = require_admin();
+fix_toefl_spelling();
 
 $type = in_array($_GET['type'] ?? '', INDATA_TYPES, true) ? $_GET['type'] : 'IELTS ACADEMIC';
 

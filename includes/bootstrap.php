@@ -192,11 +192,11 @@ function require_admin(string $base = '../'): array
 }
 
 // ---------- 상수 ----------
-const SCORE_TYPES = ['ESL TEST', 'TOEIC TEST', 'TOFLE TEST', 'IELTS ACADEMIC TEST', 'IELTS GENERAL TEST', 'BUSINESS TEST', 'SPEAKING MASTER TEST'];
+const SCORE_TYPES = ['ESL TEST', 'TOEIC TEST', 'TOEFL TEST', 'IELTS ACADEMIC TEST', 'IELTS GENERAL TEST', 'BUSINESS TEST', 'SPEAKING MASTER TEST'];
 const SUBTABS = [
     'ESL TEST'             => ['Listening', 'Reading', 'Writing', 'Speaking'],
     'TOEIC TEST'           => ['Listening', 'Reading'],
-    'TOFLE TEST'           => ['Listening', 'Reading', 'Writing', 'Speaking'],
+    'TOEFL TEST'           => ['Listening', 'Reading', 'Writing', 'Speaking'],
     'IELTS ACADEMIC TEST'  => ['Listening', 'Reading', 'Writing'],
     'IELTS GENERAL TEST'   => ['Listening', 'Reading', 'Writing'],
     'BUSINESS TEST'        => ['Listening', 'Reading', 'Writing', 'Speaking'],
@@ -204,11 +204,18 @@ const SUBTABS = [
 ];
 // 응시 데이터가 있는 시험 (탭 이름 → test_attempts.test_type)
 const DATA_TYPES = ['IELTS ACADEMIC TEST' => 'IELTS ACADEMIC', 'IELTS GENERAL TEST' => 'IELTS GENERAL'];
-const INDATA_TYPES = ['ESL', 'TOEIC', 'TOFLE', 'IELTS ACADEMIC', 'IELTS GENERAL', 'BUSINESS'];
+const INDATA_TYPES = ['ESL', 'TOEIC', 'TOEFL', 'IELTS ACADEMIC', 'IELTS GENERAL', 'BUSINESS'];
 const COURSES = ['ESL', 'TOEIC', 'TOEFL', 'SPEAKING MASTER', 'BUSINESS', 'IELTS ACADEMIC', 'IELTS GENERAL'];
 const CAMPUSES = ['CAPITAL', 'ENCANTO', 'TARLAC', 'BAYDREAM'];
-const SCHEDULE_TYPES = ['IELTS ACADEMIC', 'IELTS GENERAL', 'TOEIC', 'TOFLE', 'ESL', 'BUSINESS'];
+const SCHEDULE_TYPES = ['IELTS ACADEMIC', 'IELTS GENERAL', 'TOEIC', 'TOEFL', 'ESL', 'BUSINESS'];
 const SET_COUNT = 30;
+
+/** 예전 철자 TOFLE 로 저장된 점수·일정을 TOEFL 로 바꿈 (관리자 indata·schedule 화면을 열 때. 바꿀 줄이 없으면 아무 일 없음) */
+function fix_toefl_spelling(): void
+{
+    q("UPDATE score_entries SET test_type = 'TOEFL' WHERE test_type = 'TOFLE'");
+    q("UPDATE schedules SET test_type = 'TOEFL' WHERE test_type = 'TOFLE'");
+}
 
 // ---------- 채점 (Listening · Reading 모든 세트) ----------
 // 정답 칸 쓰는 법:
