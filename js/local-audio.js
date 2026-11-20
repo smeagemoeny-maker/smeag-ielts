@@ -13,6 +13,7 @@
       const open = indexedDB.open(DB, 1);
       open.onupgradeneeded = () => open.result.createObjectStore(STORE);
       open.onerror = () => reject(open.error);
+      open.onblocked = () => reject(new Error('The audio settings are busy in another tab. Close other test tabs and reload.'));
       open.onsuccess = () => {
         const tx = open.result.transaction(STORE, mode);
         const req = fn(tx.objectStore(STORE));
@@ -43,6 +44,16 @@
 
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
+  // 폴더 읽기가 끝나지 않을 때 (OneDrive 클라우드 전용 파일, 옮겨진 폴더, 아주 큰 폴더 등) 멈춰 있지 않게 시간 제한
+  const TIMEOUT_MS = 10000;
+  function withTimeout(p, ms) {
+    let t;
+    return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => { const e = new Error('timeout'); e.name = 'TimeoutError'; rej(e); }, ms || TIMEOUT_MS); })])
+      .finally(() => clearTimeout(t));
+  }
+  const SLOW_MSG = 'The audio folder on this computer is not responding. If the folder is in OneDrive, right-click the audio files and choose '
+    + '<b>Always keep on this device</b>, or select the folder again.';
+
   // opts.checkOnly: 재생기 대신 "연결됨" 표시만 (시험 전 안내 화면용)
   function mount(box, setNo, opts) {
     const checkOnly = !!(opts && opts.checkOnly);
@@ -69,8 +80,19 @@
         + '<audio controls preload="auto" class="w-full" src="' + objectUrl + '"></audio>', 'ok');
     }
 
-    async function load(dir, ask) {
-      let perm = await dir.queryPermission({ mode: 'read' });
+    function renderSlow() {
+      render('⚠️ ' + SLOW_MSG + '<div class="mt-3"><button type="button" data-act="pick" class="' + btn + '">Select audio folder</button></div>', 'warn');
+    }
+
+    function load(dir, ask) {
+      render('Checking the audio on this computer…');
+      return loadInner(dir, ask).catch(e => {
+        if (e.name === 'TimeoutError') renderSlow(); else render('⚠️ ' + esc(e.message), 'warn');
+      });
+    }
+
+    async function loadInner(dir, ask) {
+      let perm = await withTimeout(dir.queryPermission({ mode: 'read' }));
       if (perm !== 'granted' && ask) perm = await dir.requestPermission({ mode: 'read' });
       if (perm !== 'granted') {
         render('Audio folder <b>' + esc(dir.name) + '</b> is set on this computer. Click to allow access.<div class="mt-3">'
@@ -78,7 +100,7 @@
           + '<button type="button" data-act="pick" class="' + btn2 + '">Change folder</button></div>');
         return;
       }
-      const file = await findFile(dir, setNo);
+      const file = await withTimeout(findFile(dir, setNo));
       if (file) play(file, dir.name);
       else render('⚠️ <b>SET ' + setNo + ' AUDIO.mp3</b> was not found in folder <b>' + esc(dir.name) + '</b> (or its subfolders).<div class="mt-3">'
         + '<button type="button" data-act="pick" class="' + btn + '">Select another folder</button></div>', 'warn');
@@ -96,7 +118,10 @@
     box.addEventListener('click', async e => {
       const act = e.target.dataset && e.target.dataset.act;
       if (act === 'pick') pick();
-      if (act === 'allow') { const dir = await getDir(); if (dir) load(dir, true); else pick(); }
+      if (act === 'allow') {
+        const dir = await withTimeout(getDir()).catch(() => null);
+        if (dir) load(dir, true); else pick();
+      }
     });
 
     if (!supported) {
@@ -106,12 +131,13 @@
       return;
     }
 
-    getDir().then(dir => {
+    render('Checking the audio on this computer…');
+    withTimeout(getDir()).then(dir => {
       if (dir) return load(dir, false);
       render('No audio folder is set on this computer yet. Click the button and select the <b>Music</b> folder '
         + '(or the folder inside it that has <b>SET 1 AUDIO.mp3 ~ SET 30 AUDIO.mp3</b>).'
         + '<div class="mt-3"><button type="button" data-act="pick" class="' + btn + '">Select audio folder</button></div>');
-    }).catch(e => render('⚠️ ' + esc(e.message), 'warn'));
+    }).catch(e => { if (e.name === 'TimeoutError') renderSlow(); else render('⚠️ ' + esc(e.message), 'warn'); });
   }
 
   // 시험 화면(js/exam-audio.js)용: 재생기 없이 폴더·파일만 다룸
@@ -121,5 +147,5 @@
     return dir;
   }
 
-  window.LocalAudio = { mount: mount, supported: supported, getDir: getDir, findFile: findFile, pickDir: pickDir };
+  window.LocalAudio = { mount: mount, supported: supported, getDir: getDir, findFile: findFile, pickDir: pickDir, withTimeout: withTimeout, SLOW_MSG: SLOW_MSG };
 })();

@@ -53,7 +53,7 @@
     // 멈춤 금지: 끝나기 전에 멈추면 바로 다시 재생
     audio.addEventListener('pause', () => { if (started && !done && !audio.ended) audio.play().catch(() => {}); });
     audio.addEventListener('error', () => {
-      if (!done) showOverlay('<h2>Audio error</h2><p>The audio file could not be played. Please call the supervisor.</p>');
+      if (!done && audio.getAttribute('src')) showOverlay('<h2>Audio error</h2><p>The audio file could not be played. Please call the supervisor.</p>');
     });
     // 키보드 미디어 키(일시정지·앞뒤 이동) 막기
     if ('mediaSession' in navigator) {
@@ -91,6 +91,7 @@
     }
 
     // PC 음원 폴더에서 파일 찾기. 사람이 눌러야 하는 단계면 안내 화면을 띄우고 false
+    // 폴더 읽기가 시간 안에 끝나지 않으면 (OneDrive 클라우드 파일 등) "Loading audio…" 에 멈추지 않고 안내 + 폴더 다시 고르기
     async function loadLocal(ask) {
       const L = window.LocalAudio;
       if (!L || !L.supported) {
@@ -98,22 +99,37 @@
           + '<input type="file" accept="audio/*" data-ea="file">');
         return false;
       }
-      let dir = await L.getDir();
+      try { return await loadLocalInner(L, ask); }
+      catch (err) {
+        if (err.name !== 'TimeoutError') throw err;
+        // 읽다 만 파일은 버림 → [Try again] 은 폴더부터 다시 찾음
+        if (audio.src) { audio.removeAttribute('src'); try { audio.load(); } catch (e) {} }
+        showOverlay('<h2>Audio not responding</h2><p>' + L.SLOW_MSG + '<br>Please call the supervisor.</p>'
+          + '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'
+          + '<button type="button" class="ea-btn" data-ea="go">Try again</button>'
+          + '<button type="button" class="ea-btn" data-ea="pick">Select audio folder</button></div>');
+        return false;
+      }
+    }
+
+    async function loadLocalInner(L, ask) {
+      const T = L.withTimeout;
+      let dir = await T(L.getDir());
       if (!dir) {
         showOverlay('<h2>Audio not set up</h2><p>The audio folder is not set on this computer. Please call the supervisor.</p>'
           + '<button type="button" class="ea-btn" data-ea="pick">Select audio folder</button>');
         return false;
       }
-      let perm = await dir.queryPermission({ mode: 'read' });
+      let perm = await T(dir.queryPermission({ mode: 'read' }));
       if (perm !== 'granted' && ask) perm = await dir.requestPermission({ mode: 'read' });
       if (perm !== 'granted') { askStart(); return false; }
-      const file = await L.findFile(dir, o.setNo);
+      const file = await T(L.findFile(dir, o.setNo));
       if (!file) {
         showOverlay('<h2>Audio not found</h2><p><b>SET ' + o.setNo + ' AUDIO.mp3</b> was not found in folder <b>' + esc(dir.name)
           + '</b>. Please call the supervisor.</p><button type="button" class="ea-btn" data-ea="pick">Select audio folder</button>');
         return false;
       }
-      await useFile(file);
+      await T(useFile(file), 20000);
       return true;
     }
 
