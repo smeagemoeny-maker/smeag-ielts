@@ -63,18 +63,72 @@
   }
 
   /*
-   * 형광펜 (실제 CD IELTS 처럼): 지문·문제 글자를 끌어 고르면 [Highlight] 버튼, 칠한 곳을 누르면 [Clear] 버튼
+   * 형광펜 (실제 CD IELTS 처럼): 지문·문제 글자를 끌어 고르면 [Highlight] [Notes] 버튼, 칠한 곳을 누르면 [Notes] [Clear] 버튼
    *   <mark class="rd-hl" data-hl="N"> 로 감쌈 — 여러 문단에 걸친 선택은 같은 N 으로 묶어 한 번에 지움
+   *   Notes: 칠한 곳에 메모 (옆에 작은 메모 표시, 마우스를 올리면 내용). 답안지에는 들어가지 않음
    */
   function initHighlighter(root) {
     const SKIP = 'input,select,textarea,button,option,script,style,.rd-divider';
-    let seq = 0, pending = null, target = null;
+    let seq = 0, pending = null, target = null, noteId = null;
+    const notes = {};
 
     const pop = document.createElement('div');
     pop.className = 'rd-hl-pop';
     pop.innerHTML = '<button type="button" data-act="hl"><span class="rd-hl-ico"></span>Highlight</button>'
+      + '<button type="button" data-act="note"><span class="rd-hl-ico rd-hl-ico-note"></span>Notes</button>'
       + '<button type="button" data-act="clear"><span class="rd-hl-ico rd-hl-ico-x"></span>Clear</button>';
     document.body.appendChild(pop);
+
+    // 메모 창
+    const box = document.createElement('div');
+    box.className = 'rd-note-box';
+    box.innerHTML = '<div class="rd-note-head"><span>Notes</span><button type="button" data-act="close" title="Close">&times;</button></div>'
+      + '<textarea rows="4" placeholder="Type your note here"></textarea>'
+      + '<div class="rd-note-foot"><button type="button" data-act="del">Delete note</button></div>';
+    document.body.appendChild(box);
+    const area = box.querySelector('textarea');
+
+    function marksOf(id) { return [...root.querySelectorAll('mark.rd-hl[data-hl="' + id + '"]')]; }
+
+    function refreshNote(id) {
+      const text = (notes[id] || '').trim();
+      const ms = marksOf(id);
+      ms.forEach((mk, i) => {
+        mk.classList.toggle('rd-hl-noted', !!text);
+        mk.classList.toggle('rd-note-end', !!text && i === ms.length - 1);
+        if (text) mk.title = text; else mk.removeAttribute('title');
+      });
+    }
+
+    function openNote(id) {
+      const ms = marksOf(id);
+      if (!ms.length) return;
+      noteId = id;
+      area.value = notes[id] || '';
+      box.style.display = 'block';
+      const r = ms[ms.length - 1].getBoundingClientRect();
+      const w = box.offsetWidth, h = box.offsetHeight;
+      let top = r.bottom + 6;
+      if (top + h > window.innerHeight - 70) top = r.top - h - 6;
+      box.style.top = Math.max(4, top) + 'px';
+      box.style.left = Math.min(window.innerWidth - w - 4, Math.max(4, r.left)) + 'px';
+      area.focus();
+    }
+
+    function closeNote() {
+      if (noteId === null) return;
+      if (!(notes[noteId] || '').trim()) delete notes[noteId];
+      refreshNote(noteId);
+      noteId = null;
+      box.style.display = 'none';
+    }
+
+    area.addEventListener('input', () => { if (noteId !== null) { notes[noteId] = area.value; refreshNote(noteId); } });
+    box.addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.act === 'del' && noteId !== null) { notes[noteId] = ''; area.value = ''; }
+      closeNote();
+    });
 
     function hide() { pop.style.display = 'none'; pending = target = null; }
     function show(rect, mode) {
@@ -93,8 +147,10 @@
       return el && root.contains(el) && el.closest('.rd-pane');
     }
 
+    /** 칠한 묶음 번호 (새로 칠한 글자가 없고 이미 칠한 곳 안이면 그 번호, 아무것도 없으면 null) */
     function wrap(range) {
       const id = String(++seq);
+      let made = 0;
       let base = range.commonAncestorContainer;
       if (base.nodeType !== 1) base = base.parentElement;
       const nodes = [];
@@ -117,11 +173,18 @@
         mk.dataset.hl = id;
         mid.parentNode.insertBefore(mk, mid);
         mk.appendChild(mid);
+        made++;
       });
+      if (made) return id;
+      const sc = range.startContainer;
+      const inside = (sc.nodeType === 1 ? sc : sc.parentElement).closest('mark.rd-hl');
+      return inside ? inside.dataset.hl : null;
     }
 
     function clear(id) {
-      root.querySelectorAll('mark.rd-hl[data-hl="' + id + '"]').forEach(mk => {
+      if (noteId === id) { notes[id] = ''; closeNote(); }
+      delete notes[id];
+      marksOf(id).forEach(mk => {
         const parent = mk.parentNode;
         while (mk.firstChild) parent.insertBefore(mk.firstChild, mk);
         parent.removeChild(mk);
@@ -133,13 +196,18 @@
     pop.addEventListener('mousedown', e => e.preventDefault());
     pop.addEventListener('click', e => {
       const b = e.target.closest('button'); if (!b) return;
-      if (b.dataset.act === 'hl' && pending) {
-        wrap(pending);
+      let openId = null;
+      if ((b.dataset.act === 'hl' || b.dataset.act === 'note') && pending) {
+        const id = wrap(pending);
         const sel = window.getSelection(); if (sel) sel.removeAllRanges();
+        if (b.dataset.act === 'note') openId = id;
+      } else if (b.dataset.act === 'note' && target) {
+        openId = target;
       } else if (b.dataset.act === 'clear' && target) {
         clear(target);
       }
       hide();
+      if (openId) openNote(openId);
     });
 
     root.addEventListener('mouseup', e => {
@@ -167,10 +235,13 @@
       }, 0);
     });
 
-    document.addEventListener('mousedown', e => { if (!pop.contains(e.target)) hide(); });
-    root.addEventListener('scroll', hide, true);
-    window.addEventListener('resize', hide);
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') hide(); });
+    document.addEventListener('mousedown', e => {
+      if (!pop.contains(e.target)) hide();
+      if (!box.contains(e.target) && !pop.contains(e.target)) closeNote();
+    });
+    root.addEventListener('scroll', () => { hide(); closeNote(); }, true);
+    window.addEventListener('resize', () => { hide(); closeNote(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { hide(); closeNote(); } });
   }
 
   // Part 를 바꿀 때 지문·문제 맨 위로

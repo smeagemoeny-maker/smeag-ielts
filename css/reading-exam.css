@@ -36,3 +36,18 @@ mark.rd-hl { background: #ffeb3b; color: inherit; padding: 0; cursor: pointer; }
 .rd-hl-pop button:hover { background: #eef3fb; }
 .rd-hl-ico { width: 18px; height: 12px; background: #ffeb3b; border: 1px solid #c9b400; border-radius: 2px; }
 .rd-hl-ico-x { background: linear-gradient(to top right, #fff 45%, #c00 45%, #c00 55%, #fff 55%); border-color: #999; }
+.rd-hl-ico-note { background: #fff repeating-linear-gradient(to bottom, transparent 0 3px, #8aa4c8 3px 4px); border-color: #6b87b0; }
+
+/* 메모 (Notes): 메모가 있는 곳은 아래 점선 + 끝에 작은 메모 표시, 마우스를 올리면 내용 */
+mark.rd-hl.rd-hl-noted { border-bottom: 2px dotted #1a5bb8; }
+mark.rd-hl.rd-note-end::after { content: "\270E"; display: inline-block; margin-left: 2px; padding: 0 3px; font-size: 11px; line-height: 14px;
+  color: #fff; background: #1a5bb8; border-radius: 3px; vertical-align: super; }
+.rd-note-box { position: fixed; z-index: 1001; display: none; width: 280px; background: #fffde7; border: 1px solid #c9b400;
+  border-radius: 4px; box-shadow: 0 4px 14px rgba(0,0,0,.2); font-size: 13px; }
+.rd-note-head { display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; font-weight: 700; color: #444; border-bottom: 1px solid #eadf8a; }
+.rd-note-head button { background: none; border: 0; font-size: 18px; line-height: 1; color: #666; cursor: pointer; padding: 0 2px; }
+.rd-note-box textarea { display: block; width: 100%; box-sizing: border-box; border: 0; padding: 8px; resize: vertical; min-height: 80px;
+  background: transparent; font: inherit; color: #222; outline: none; }
+.rd-note-foot { display: flex; justify-content: flex-end; padding: 4px 8px 6px; border-top: 1px solid #eadf8a; }
+.rd-note-foot button { background: none; border: 0; color: #b91c1c; font-size: 12px; cursor: pointer; }
+.rd-note-foot button:hover { text-decoration: underline; }
