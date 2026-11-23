@@ -178,6 +178,7 @@ function require_login(string $base = ''): array
         exit;
     }
     try { regrade_general_listening_once(); } catch (Throwable $e) { error_log('regrade: ' . $e->getMessage()); }
+    try { apply_answer_fixes_once(); } catch (Throwable $e) { error_log('answer fix: ' . $e->getMessage()); }
     return $u;
 }
 
@@ -372,6 +373,38 @@ function regrade_general_listening_once(): void
         foreach ($sets as $s) regrade_attempts((string)$s, 'LISTENING');
     }
     $_SESSION['regraded_gl_v1'] = true;
+}
+
+/**
+ * 한 번만: 정답 고치기 (학원이 준 정답지대로) → 새 정답을 등록하고 그 세트 응시를 다시 채점
+ *   [표시, 세트, 영역, 정답 40개]. 표시는 activity_log 에 남겨 두 번 돌지 않게. 고칠 것이 생기면 새 표시로 아래에 더함
+ *   Listening 은 GENERAL N 도 ACADEMIC N 정답을 씀 → 둘 다 다시 채점
+ */
+const ANSWER_FIXES = [
+    ['answer-fix-academic20-listening-v1', 'ACADEMIC20', 'Listening', [
+        'C', '533 East/E 67(th)', '93014269', 'CX 912 // Cathay Pacific 912', 'C', 'B', 'A', 'clear customs',
+        'passport // key // ticket // (baggage) claim number', 'passport // key // ticket // (baggage) claim number',
+        '10(am)-5(pm)', 'www. atstix.com // www.ATSTIX.com', '3', '4', '2', '10th-14th', '$35', '$299', '7:30', '$2.50',
+        'G', 'A', 'C', 'C', 'A', 'B', 'B', 'A',
+        'select (all) (the) films // select all films // select the films', 'design (the) program', 'clay/plastic', 'Reeds',
+        'underground', 'tested', 'compost // soil', '(healthy natural) home // habitat', 'labour // labor', 'increases',
+        'unions // manufacturers', 'efficiency // winter // cold weather // mosquitoes',
+    ]],
+];
+
+function apply_answer_fixes_once(): void
+{
+    $flag = 'answer_fixes_' . count(ANSWER_FIXES);
+    if (!empty($_SESSION[$flag])) return;
+    foreach (ANSWER_FIXES as [$mark, $set, $course, $answers]) {
+        if (q("SELECT 1 FROM activity_log WHERE action = 'System' AND details = ? LIMIT 1", [$mark])->fetchColumn()) continue;
+        log_activity('system', 'System', $mark);   // 먼저 남겨서 동시에 여러 번 돌지 않게
+        q('INSERT INTO answer_keys (test_name, course, answers, created_at) VALUES (?,?,?,?)',
+            [$set, $course, json_encode($answers, JSON_UNESCAPED_UNICODE), now()]);
+        regrade_attempts($set, $course);
+        if ($course === 'Listening' && preg_match('/^ACADEMIC(\d+)$/', $set, $m)) regrade_attempts('GENERAL' . $m[1], $course);
+    }
+    $_SESSION[$flag] = true;
 }
 
 function grade(array $given, ?array $key): int
