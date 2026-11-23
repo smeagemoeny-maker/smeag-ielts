@@ -8,7 +8,7 @@
 require_once __DIR__ . '/bootstrap.php';
 
 const DRAFT_IDLE_MAX = 12 * 3600;   // 12시간 동안 아무 진행이 없으면 버림 (다음 날 같은 세트를 다시 볼 때 옛 답안이 뜨지 않게)
-const DRAFT_DISCARD_USERS = ['s2025001'];   // "Resume Test" 옆 Discard 버튼이 보이는 계정 (student/discard_draft.php)
+const DRAFT_DISCARD_USERS = [];   // "Resume Test" 옆 Discard 버튼이 보이는 계정 (student/discard_draft.php)
 
 function can_discard_drafts(array $me): bool
 {
