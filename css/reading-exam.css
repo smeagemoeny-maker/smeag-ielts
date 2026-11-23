@@ -38,19 +38,44 @@ mark.rd-hl { background: #ffeb3b; color: inherit; padding: 0; cursor: pointer; }
 .rd-hl-ico-x { background: linear-gradient(to top right, #fff 45%, #c00 45%, #c00 55%, #fff 55%); border-color: #999; }
 .rd-hl-ico-note { background: #fff repeating-linear-gradient(to bottom, transparent 0 3px, #8aa4c8 3px 4px); border-color: #6b87b0; }
 
-/* 메모 (Notes): 메모가 있는 곳은 아래 점선 + 끝에 작은 메모 표시, 마우스를 올리면 내용 */
+/* 메모가 붙은 곳: 아래 점선 (형광펜 없이 메모만 단 곳은 옅은 파랑), 끝에 ✎ 표시, 마우스를 올리면 내용 */
 mark.rd-hl.rd-hl-noted { border-bottom: 2px dotted #1a5bb8; }
+mark.rd-hl.rd-note-only { background: #dbe5ff; }
+mark.rd-hl.rd-hl-active { background: #2846c8; color: #fff; }
 mark.rd-hl.rd-note-end::after { content: "\270E"; display: inline-block; margin-left: 2px; padding: 0 3px; font-size: 11px; line-height: 14px;
   color: #fff; background: #1a5bb8; border-radius: 3px; vertical-align: super; }
-.rd-note-box { position: fixed; z-index: 1001; display: none; width: 280px; background: #fffde7; border: 1px solid #c9b400;
-  border-radius: 4px; box-shadow: 0 4px 14px rgba(0,0,0,.2); font-size: 13px; }
-.rd-note-head { display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; font-weight: 700; color: #444; border-bottom: 1px solid #eadf8a; }
-.rd-note-head button { background: none; border: 0; font-size: 18px; line-height: 1; color: #666; cursor: pointer; padding: 0 2px; }
-.rd-note-box textarea { display: block; width: 100%; box-sizing: border-box; border: 0; padding: 8px; resize: vertical; min-height: 80px;
-  background: transparent; font: inherit; color: #222; outline: none; }
-.rd-note-foot { display: flex; justify-content: flex-end; padding: 4px 8px 6px; border-top: 1px solid #eadf8a; }
-.rd-note-foot button { background: none; border: 0; color: #b91c1c; font-size: 12px; cursor: pointer; }
-.rd-note-foot button:hover { text-decoration: underline; }
+
+/* 오른쪽 Notes 칸 (위 막대 Notes 아이콘 / 글자 고르고 Note) — 열리면 시험 화면이 왼쪽으로 좁아짐 */
+.rd-notes { position: fixed; top: 0; right: 0; bottom: 0; z-index: 35; width: 300px; display: flex; flex-direction: column;
+  background: #e6e6e6; border-left: 1px solid #cfcfcf; font-family: Arial, Helvetica, sans-serif; }
+.rd-notes[hidden] { display: none; }
+body.rd-notes-open #exam-form { margin-right: 300px; }
+body.rd-notes-open .lp-nav { right: 300px; }
+body.rd-notes-open .lp-arrows { right: 330px; }
+.rd-notes-head { flex: none; display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 0 12px 0 16px;
+  background: #fff; border-bottom: 1px solid #cfcfcf; box-shadow: 0 1px 3px rgba(0,0,0,.06); font-size: 16px; color: #000; }
+.rd-notes-x { border: 0; background: none; cursor: pointer; color: #000; display: flex; padding: 6px; }
+.rd-notes-body { flex: 1; min-height: 0; overflow-y: auto; }
+.rd-notes-empty { display: flex; flex-direction: column; justify-content: center; height: 100%; padding: 0 20px; text-align: center; color: #000; }
+.rd-notes-empty[hidden] { display: none; }
+.rd-notes-empty p { margin: 0 0 6px; font-size: 15px; }
+.rd-notes-empty .rd-notes-big { font-size: 21px; line-height: 1.25; margin-bottom: 26px; }
+.rd-note-card { margin: 0 0 2px; padding: 14px 12px 10px 14px; background: #fff; color: #000; font-size: 15px; line-height: 1.6; border-left: 4px solid #2846c8; }
+.rd-note-card.rd-on { background: #2846c8; color: #fff; }
+.rd-note-quote { cursor: pointer; margin-bottom: 10px; overflow-wrap: anywhere; }
+.rd-note-quote b { margin-right: 4px; }
+.rd-note-more { display: block; border: 0; padding: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+.rd-note-card:not(.rd-on) .rd-note-more { color: #2846c8; }
+.rd-note-more:hover { text-decoration: underline; }
+.rd-note-card textarea { display: block; width: 100%; box-sizing: border-box; min-height: 44px; padding: 6px 8px; resize: vertical;
+  border: 1px solid #9aa6c9; border-radius: 0; background: #fff; color: #000; font: 15px/1.45 Arial, Helvetica, sans-serif; outline: none; }
+.rd-note-card textarea:focus { border-color: #000; }
+.rd-note-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+.rd-note-del { border: 0; background: none; color: inherit; font: inherit; cursor: pointer; padding: 0; }
+.rd-note-card:not(.rd-on) .rd-note-del { color: #2846c8; }
+.rd-note-del:hover { text-decoration: underline; }
+body.ts-1 .rd-note-card, body.ts-1 .rd-note-card textarea { font-size: 17px; }
+body.ts-2 .rd-note-card, body.ts-2 .rd-note-card textarea { font-size: 20px; }
 
 /* 글자 동그라미 보기 (ACADEMIC20 Reading 7-12): 라디오 대신 A·B·C 가 든 동그라미를 누름. 고르면 채워짐 */
 label.lr-opt { display: inline-flex; align-items: center; gap: 6px; margin-right: 18px; cursor: pointer; position: relative; }

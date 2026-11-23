@@ -260,8 +260,8 @@ if ($section === 'reading' && $hasContent) {
 <script>
 const form = document.getElementById("exam-form");
 const root = document.getElementById("exam-content");
-// 위 막대 도구: 연결 상태 · Options (제출 / Contrast / Text size) · Notes
-const tools = ExamTools.mount({ form: form, top: document.querySelector(".lp-top"), key: <?= json_encode($me['id'] . ':' . $setName . ':' . $section . ':' . $_SESSION[$sessKey]) ?>, beforeSend: function () { examSave.clear(); } });
+// 위 막대 도구: 연결 상태 · Options (제출 / Contrast / Text size) · Notes (오른쪽 메모 칸)
+const tools = ExamTools.mount({ form: form, top: document.querySelector(".lp-top"), key: <?= json_encode($me['id'] . ':' . $setName . ':' . $section . ':' . $_SESSION[$sessKey]) ?>, beforeSend: function () { examSave.clear(); }, onNotes: function () { ReadingLayout.toggleNotes(); } });
 // "List of Headings" 문제 → 제목을 끌어다 놓기 (Part 나누기보다 먼저)
 ReadingHeadings.init(root);
 // 상자 속 보기(A–F, 낱말 목록)에서 고르는 문제 → 보기를 끌어다 놓기

@@ -187,6 +187,7 @@
       if (act === 'wifi') { if (pop.hidden) showWifi(); else pop.hidden = true; }
       else if (act === 'menu') showMenu();
       else if (act === 'close') closeAll();
+      else if (act === 'notes' && o.onNotes) o.onNotes();   // Reading: 지문에 붙이는 메모 칸 (reading-layout.js)
       else if (act === 'notes') { notes.hidden = !notes.hidden; document.body.classList.toggle('et-notes-open', !notes.hidden); if (!notes.hidden) noteText.focus(); }
       else if (act === 'notes-close') { notes.hidden = true; document.body.classList.remove('et-notes-open'); }
       else if (act === 'submit-page') showSubmitPage();
