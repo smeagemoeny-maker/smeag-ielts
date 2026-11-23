@@ -390,6 +390,8 @@ const ANSWER_FIXES = [
         'underground', 'tested', 'compost // soil', '(healthy natural) home // habitat', 'labour // labor', 'increases',
         'unions // manufacturers', 'efficiency // winter // cold weather // mosquitoes',
     ]],
+    // 일부 문항만: [문항 번호 => 정답] — 지금 정답을 가져와 그 문항만 바꿔 새로 등록
+    ['answer-fix-academic20-reading-q12-v1', 'ACADEMIC20', 'Reading', [12 => 'A // C']],   // 둘 중 하나면 정답 (예전 "A , C" 는 둘 다 써야 정답)
 ];
 
 function apply_answer_fixes_once(): void
@@ -398,6 +400,13 @@ function apply_answer_fixes_once(): void
     if (!empty($_SESSION[$flag])) return;
     foreach (ANSWER_FIXES as [$mark, $set, $course, $answers]) {
         if (q("SELECT 1 FROM activity_log WHERE action = 'System' AND details = ? LIMIT 1", [$mark])->fetchColumn()) continue;
+        if (!array_is_list($answers)) {   // 일부 문항만 → 지금 정답 위에 덮어씀
+            $cur = answer_key($set, $course);
+            if (!$cur) continue;   // 정답이 아직 없으면 건너뜀 (표시도 남기지 않음)
+            $cur = array_pad(array_values($cur), 40, '');
+            foreach ($answers as $n => $a) $cur[$n - 1] = $a;
+            $answers = $cur;
+        }
         log_activity('system', 'System', $mark);   // 먼저 남겨서 동시에 여러 번 돌지 않게
         q('INSERT INTO answer_keys (test_name, course, answers, created_at) VALUES (?,?,?,?)',
             [$set, $course, json_encode($answers, JSON_UNESCAPED_UNICODE), now()]);
