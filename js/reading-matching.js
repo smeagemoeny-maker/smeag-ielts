@@ -114,7 +114,8 @@
   function titleOf(box, items) {
     const first = lines(box)[0] || '';
     if (items[0] && items[0].value === 'A' && /^\(?A[.)]?\s/.test(first)) return '';
-    return first.length <= 60 && /^(list|words?|phrases?|names?|people|researchers?|scientists?)\b/i.test(first) ? first : '';
+    // 대문자 제목도 ("COMMITTEE MEMBERS’ BACKGROUND AND EXPERIENCE" — ACADEMIC20 Listening 21-23)
+    return first.length <= 60 && (/^(list|words?|phrases?|names?|people|researchers?|scientists?)\b/i.test(first) || /^[^a-z]{8,}$/.test(first)) ? first : '';
   }
 
   // 글자 없는 낱말 상자 ("Complete the summary using words from the box"): 줄마다 짧은 낱말·구 → 보기 (값 = 그 낱말)
@@ -212,10 +213,17 @@
   const noInputs = el => !el.querySelector('input,select,textarea') && !el.closest('.hd-list,.mt-list');
   const SEL = 'div,td,table,ul,ol,center,p';
 
-  function findSets(root) {
+  // Listening: 상자가 그 문제의 입력칸들 사이에 끼어 있으면 (문항마다 A–C 보기가 붙은 객관식) 끌어다 놓기로 바꾸지 않음
+  function outside(box, inputs) {
+    const after = inputs.filter(inp => box.compareDocumentPosition(inp) & Node.DOCUMENT_POSITION_FOLLOWING).length;
+    return after === 0 || after === inputs.length;
+  }
+
+  function findSets(root, listening) {
     const sets = [];
-    questionHalves(root).forEach(half => {
-      wrapLoose(half);
+    // Listening 은 반쪽 나누기가 없음 → 문제지 전체에서, 상자 따로 된 글자 보기(A, B, C …)만
+    (listening ? [root] : questionHalves(root)).forEach(half => {
+      if (!listening) wrapLoose(half);
       // 1) 글자 보기 상자 (A, B, C …)
       // 보기가 두 칸으로 나뉜 상자 (GENERAL3: A–D | E–H) 는 둘을 감싼 상자까지 넓힘
       const grow = box => {
@@ -229,8 +237,12 @@
         const inputs = inputsOf(half, box);
         if (!inputs) return;
         const items = parse(box);
-        sets.push({ box: box, items: items, title: titleOf(box, items), letters: true, inputs: inputs, reuse: /more than once/i.test(instructions(half, box)) });
+        if (listening && !outside(box, inputs)) return;
+        // 보기가 빈칸보다 적으면 (ACADEMIC22 Listening 36-40: A–C 로 5칸) 같은 보기를 여러 번 씀
+        const reuse = /more than once/i.test(instructions(half, box)) || items.length < inputs.length;
+        sets.push({ box: box, items: items, title: titleOf(box, items), letters: true, inputs: inputs, reuse: reuse });
       });
+      if (listening) return;
       // 2) 글자 없는 낱말 상자 — 안내문이 "from the box / list of words" 일 때만
       const taken = el => sets.some(s => s.box.contains(el) || el.contains(s.box));
       const wc = [...half.querySelectorAll(SEL)].filter(el => noInputs(el) && !taken(el) && parseWords(el).length);
@@ -427,8 +439,9 @@
     at.parentNode.insertBefore(hint, at);
   }
 
-  function init(root) {
-    const sets = findSets(root);
+  /** opts.listening: Listening 문제지 (반쪽 나누기 없음) — 상자 따로 된 글자 보기 맞추기만 (예: ACADEMIC20 21-23) */
+  function init(root, opts) {
+    const sets = findSets(root, !!(opts && opts.listening));
     sets.forEach(setup);
     return sets.length;
   }

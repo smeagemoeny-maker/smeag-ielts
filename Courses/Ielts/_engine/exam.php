@@ -158,6 +158,7 @@ if ($section === 'listening') {
   <div id="lp-nav" class="lp-nav"></div>
 </form>
 <script src="<?= $base ?>js/listening-parts.js"></script>
+<script src="<?= $base ?>js/reading-matching.js"></script>
 <script src="<?= $base ?>js/local-audio.js"></script>
 <script src="<?= $base ?>js/exam-audio.js"></script>
 <script src="<?= $base ?>js/exam-tools.js"></script>
@@ -167,6 +168,8 @@ const form = document.getElementById("exam-form");
 function submitNow() { form.submit(); }
 // 위 막대 도구: 연결 상태 · Options (제출 / Contrast / Text size) · Notes. 연결이 끊기면 제출을 미뤘다가 다시 연결되면 보냄
 const tools = ExamTools.mount({ form: form, top: document.querySelector(".lp-top"), key: <?= json_encode($me['id'] . ':' . $setName . ':' . $section . ':' . $_SESSION[$sessKey]) ?>, beforeSend: function () { examSave.clear(); } });
+// 상자 속 보기(A–G)에서 골라 쓰는 맞추기 문제 → 보기를 번호 옆 칸으로 끌어다 놓기 (Part 나누기보다 먼저)
+ReadingMatching.init(document.getElementById("exam-content"), { listening: true });
 ListeningParts.init({
   root: document.getElementById("exam-content"),
   header: document.getElementById("part-head"),
